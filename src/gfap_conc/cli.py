@@ -1,4 +1,9 @@
-"""Command-line entry point: ``gfap-conc inspect | run | demo``."""
+"""Command-line entry point: ``gfap-conc inspect | review | run | demo``.
+
+Real-data workflow: inspect -> configure -> review (confirm tissue mask + z-range) -> run.
+Synthetic data only ever goes through ``demo`` and is written under a path containing
+"synthetic"; real runs refuse such paths.
+"""
 
 from __future__ import annotations
 
@@ -16,35 +21,45 @@ from .pipeline import AnalysisResult, run_analysis, write_tables
 from .report import write_manifest, write_summary
 
 
+def _is_synthetic_path(p: Path) -> bool:
+    return any("synthetic" in part.lower() for part in p.resolve().parts)
+
+
 def _run_dir(base: str | Path, explicit: str | None, prefix: str) -> Path:
-    if explicit:
-        out = Path(explicit)
-    else:
-        out = Path(base) / f"{prefix}_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    out = Path(explicit) if explicit else Path(base) / f"{prefix}_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     if out.exists() and any(out.iterdir()):
         raise SystemExit(f"output directory {out} is not empty; choose another (results are never overwritten)")
     out.mkdir(parents=True, exist_ok=True)
     return out
 
 
-def _finish(out: Path, result: AnalysisResult, cfg: ProjectConfig, provenance: dict, synthetic: bool) -> None:
+def _finish(out: Path, result: AnalysisResult, cfg: ProjectConfig, provenance: dict, synthetic: bool,
+            review: dict) -> None:
     write_tables(result, out)
     a = cfg.analysis
-    figs = plots.make_all(result, out / "figures", a.display_percentile, a.histogram.zoom_max, synthetic)
+    if synthetic:
+        watermark = plots.SYNTHETIC_WATERMARK
+    elif review["status"] != "confirmed":
+        watermark = plots.PRELIMINARY_WATERMARK
+    else:
+        watermark = None
+    figs = plots.make_all(result, out / "figures", a.display_percentile, a.histogram.zoom_max, watermark)
     chash = config_sha256(cfg)
     write_manifest(out, config=resolved_config_dict(cfg), config_sha256=chash, provenance=provenance,
-                   result=result, synthetic=synthetic)
-    write_summary(out, result, provenance=provenance, config_sha256=chash, synthetic=synthetic, figures=figs)
+                   result=result, synthetic=synthetic, review=review)
+    write_summary(out, result, provenance=provenance, config_sha256=chash, synthetic=synthetic, figures=figs,
+                  review=review)
     print(f"Wrote {len(result.tables)} tables and {len(figs)} figures to {out}")
     for w in result.warnings:
         print(f"WARNING: {w}")
 
 
+# ------------------------------------------------------------------ inspect
 def cmd_inspect(args: argparse.Namespace) -> int:
     from .io_lif import comparability_table, inventory, sha256_file, xml_header
 
     lif = Path(args.lif)
-    out = _run_dir("results", args.out, f"inspect_{lif.stem}")
+    out = _run_dir("results/inspect", args.out, f"inspect_{lif.stem}")
     digest = sha256_file(lif)
     inv, settings = inventory(lif, pixel_stats=not args.no_pixel_stats)
     inv.to_csv(out / "series_inventory.csv", index=False)
@@ -76,47 +91,115 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_run(args: argparse.Namespace) -> int:
+# ------------------------------------------------------------------- review
+def _load(cfg_path: Path):
     from .loading import load_configured_stacks
+    from .review import review_settings_sha256
 
-    cfg_path = Path(args.config)
     cfg = load_config(cfg_path)
     stacks, refs, load_warnings, provenance = load_configured_stacks(cfg, cfg_path.parent)
-    result = run_analysis(stacks, cfg.analysis, refs)
-    result.warnings[:0] = load_warnings
-    provenance["config_path"] = str(cfg_path.resolve())
-    out = _run_dir(cfg.output_dir if Path(cfg.output_dir).is_absolute() else cfg_path.parent / cfg.output_dir,
-                   args.out, "run")
-    (out / "config_used.yaml").write_text(cfg_path.read_text(encoding="utf-8"), encoding="utf-8")
-    _finish(out, result, cfg, provenance, synthetic=False)
+    if any(s.source.startswith("synthetic") for s in stacks):  # pragma: no cover - loader only reads .lif
+        raise SystemExit("synthetic stacks cannot be analysed with `run`/`review`; use `demo`")
+    settings_hash = review_settings_sha256(cfg, provenance["lif_sha256"])
+    return cfg, stacks, refs, load_warnings, provenance, settings_hash
+
+
+def _real_base(cfg: ProjectConfig, cfg_path: Path) -> Path:
+    base = Path(cfg.output_dir)
+    return base if base.is_absolute() else cfg_path.parent / base
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    from .review import build_review
+
+    cfg_path = Path(args.config)
+    cfg, stacks, refs, load_warnings, provenance, settings_hash = _load(cfg_path)
+    out = _run_dir(_real_base(cfg, cfg_path) / "review", args.out, "review")
+    if _is_synthetic_path(out):
+        raise SystemExit(f"refusing to write real-data review into a 'synthetic' path: {out}")
+    paths = build_review(stacks, cfg, refs, out, settings_hash)
+    (out / "review_provenance.json").write_text(
+        json.dumps({**provenance, "review_settings_sha256": settings_hash, "warnings": load_warnings}, indent=2),
+        encoding="utf-8")
+    print(f"Review material written to {out}:")
+    for p in paths:
+        print(f"  {p}")
+    print(f"\nreviewed_settings_sha256 for these settings: {settings_hash}")
+    print("Open review_checklist.md, inspect the figures, then record the confirmation in the config.")
     return 0
 
 
+# ---------------------------------------------------------------------- run
+def cmd_run(args: argparse.Namespace) -> int:
+    from .review import review_status
+
+    cfg_path = Path(args.config)
+    cfg, stacks, refs, load_warnings, provenance, settings_hash = _load(cfg_path)
+    confirmed, reasons = review_status(cfg, settings_hash)
+    if not confirmed and not args.allow_unreviewed:
+        raise SystemExit(
+            "Tissue mask and z-range must be reviewed on these images before concentrations are compared:\n  - "
+            + "\n  - ".join(reasons)
+            + f"\nRun `gfap-conc review --config {cfg_path}` and follow review_checklist.md, "
+            "or pass --allow-unreviewed for a run clearly marked PRELIMINARY."
+        )
+    review = {
+        "status": "confirmed" if confirmed else "PRELIMINARY (not reviewed)",
+        "reasons": reasons,
+        "settings_sha256": settings_hash,
+        "reviewed_by": cfg.review.reviewed_by,
+        "notes": cfg.review.notes,
+    }
+    result = run_analysis(stacks, cfg.analysis, refs)
+    result.warnings[:0] = load_warnings
+    if not confirmed:
+        result.warnings.insert(0, "PRELIMINARY: tissue mask / z-range not confirmed by review - "
+                               + "; ".join(reasons))
+    provenance["config_path"] = str(cfg_path.resolve())
+    out = _run_dir(_real_base(cfg, cfg_path), args.out, "run" if confirmed else "preliminary_run")
+    if _is_synthetic_path(out):
+        raise SystemExit(f"refusing to write real-data results into a 'synthetic' path: {out}")
+    (out / "config_used.yaml").write_text(cfg_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _finish(out, result, cfg, provenance, synthetic=False, review=review)
+    return 0
+
+
+# --------------------------------------------------------------------- demo
 def cmd_demo(args: argparse.Namespace) -> int:
     from .synthetic import make_concentration_series
 
+    out = _run_dir("results/synthetic", args.out, "demo")
+    if not _is_synthetic_path(out):
+        raise SystemExit(f"synthetic demo output must go under a path containing 'synthetic' (got {out})")
     cfg = ProjectConfig(analysis=AnalysisSettings())
-    stacks = make_concentration_series()
-    result = run_analysis(stacks, cfg.analysis)
-    out = _run_dir("results", args.out, "synthetic_demo")
-    _finish(out, result, cfg, {"input": "synthetic (gfap_conc.synthetic.make_concentration_series)"}, synthetic=True)
+    result = run_analysis(make_concentration_series(), cfg.analysis)
+    review = {"status": "not applicable (synthetic data)", "reasons": []}
+    _finish(out, result, cfg, {"input": "synthetic (gfap_conc.synthetic.make_concentration_series)"},
+            synthetic=True, review=review)
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="gfap-conc", description=__doc__)
+    p = argparse.ArgumentParser(prog="gfap-conc", description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     pi = sub.add_parser("inspect", help="inventory series, channels, axes and acquisition metadata (read-only)")
     pi.add_argument("lif")
-    pi.add_argument("--out", help="output directory (default results/inspect_<name>_<timestamp>)")
+    pi.add_argument("--out", help="output directory (default results/inspect/inspect_<name>_<timestamp>)")
     pi.add_argument("--no-pixel-stats", action="store_true", help="skip reading pixels (min/max/saturation)")
     pi.set_defaults(func=cmd_inspect)
-    pr = sub.add_parser("run", help="run the four analyses on the series listed in a config file")
+    pv = sub.add_parser("review", help="QA figures + checklist for tissue mask and z-range (no comparisons)")
+    pv.add_argument("--config", required=True)
+    pv.add_argument("--out")
+    pv.set_defaults(func=cmd_review)
+    pr = sub.add_parser("run", help="run the four analyses (requires a confirmed review)")
     pr.add_argument("--config", required=True)
     pr.add_argument("--out", help="output directory (default <output_dir>/run_<timestamp>)")
+    pr.add_argument("--allow-unreviewed", action="store_true",
+                    help="run without a confirmed review; every output is marked PRELIMINARY")
     pr.set_defaults(func=cmd_run)
     pd_ = sub.add_parser("demo", help="run the full pipeline on synthetic data (watermarked)")
-    pd_.add_argument("--out")
+    pd_.add_argument("--out", help="must contain 'synthetic' (default results/synthetic/demo_<timestamp>)")
     pd_.set_defaults(func=cmd_demo)
     args = p.parse_args(argv)
     return int(args.func(args) or 0)

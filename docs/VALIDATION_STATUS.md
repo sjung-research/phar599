@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 67 tests)
+## Verified now (synthetic data, `uv run pytest`, 84 tests)
 
 | Component | What the tests establish |
 |---|---|
@@ -12,6 +12,10 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 | Analysis 1 | MIP taken over axis 0 (Z); a 2× brighter copy stays 2× in raw columns while the secondary normalised mean is identical; matched-depth windows match physical thickness |
 | Analysis 2 | Known per-slice means and depths; within-slice variance kept separate from depth variation; non-overlapping windows; asymmetric profiles reported per side; z-range respected |
 | Analysis 3 | XY-only exclusion radius; ROI coordinates map exactly to original pixels, out-of-bounds ROIs refused; pooled threshold equally weighted and deterministic; empty background region raises a QC warning; **shared-threshold bias for weak stains demonstrated** |
+| Background QC | Tail asymmetry ≈ 1 for Poisson noise, > 2 when faint signal is mixed in; each flag rule triggers on its own; the synthetic weak stains are flagged and the "rises with dilution" warning fires; rows carry an explicit "not autofluorescence" note |
+| Threshold sensitivity | Factor-1.0 rows equal the main background rows; thresholds are identical across concentrations at each factor; proxy fraction grows with T |
+| Review gate | Hash changes with file, mask or z-range settings, but not with display settings; `run` refuses without confirmation, refuses after a reviewed setting changes, and marks `--allow-unreviewed` output PRELIMINARY; `review` writes no comparison tables; manual z-ranges validated |
+| Origin separation | `data_origin` on every table; mixed origins refused; demo refuses non-`synthetic` paths; real runs refuse `synthetic` paths |
 | Analysis 4 | Integer-aligned shared bins; `bincount` = `np.histogram`; totals equal pixel counts; partial last bin density-corrected; survival curves and quantiles exact |
 | Pipeline | Identity columns (concentration, series name, channel) on every row; brightness order and mid-depth dip of synthetic data recovered; duplicate concentrations refused instead of pooled |
 | LIF reader path | On small LIF files written to the documented v2 layout (`tests/lif_writer.py`): series listing, Z/C/Y/X axes, µm conversion, channel selection without mixing, bit depth, hardware-setting capture, comparability flags |
@@ -42,17 +46,23 @@ Ordered roughly by when they will come up.
    limits absolute comparisons.
 5. **Voxel size convention.** Compare our `step = |Length| / (N − 1)` with the voxel size
    LAS X (or Fiji/Bio-Formats) displays for the same image.
-6. **Tissue mask.** The default is `none` (whole field). Look at the MIPs: if the field
-   includes empty space outside the section, switch to `absolute` or `otsu`, possibly on
-   the DAPI channel, and review the overlay figure.
-7. **Analysed z-range.** Look at the depth profiles. If stacks start or end outside the
-   tissue, decide between `z_range: auto` (unvalidated level-crossing rule) and a fixed,
-   documented per-series range, before looking at concentration results.
+6. **Tissue mask (enforced by `review`).** The default is `none` (whole field). In
+   `review_tissue_mask.png`, check for empty space outside the section. If there is any,
+   switch to `absolute` or `otsu`, possibly on the DAPI channel, re-run `review`, and
+   confirm.
+7. **Analysed z-range (enforced by `review`).** In `review_z_range.png`, check whether
+   stacks start or end outside the tissue. Prefer explicit `manual_z_ranges` over the
+   unvalidated `auto` rule. Decide from structure, before looking at concentration
+   results.
 8. **Foreground threshold and background proxy.**
-   - Check that `pooled_otsu` gives a sensible GFAP mask on real images.
-   - Check whether faint processes leak into the background region; the bias is documented
-     in `docs/methods.md`.
-   - Consider a threshold sensitivity check, or manual background ROIs chosen with Rose.
+   - Check that `pooled_otsu` gives a sensible GFAP mask on real images
+     (`background_ROI_overlays.png`).
+   - Read `threshold_sensitivity.png` and the background QC flags.
+   - The QC limits (85% region, tail ratio 2, 10% threshold dependence) are first
+     choices tuned on synthetic data. Check on the real images that they flag what an
+     expert would flag, and no more.
+   - If the proxy is flagged for some concentrations, prefer manual background ROIs chosen
+     with Rose, or report background as not determinable.
 9. **Saturation and zero clipping.** Review `qc_stack_summary.csv`. Saturation compresses
    high-concentration signal (one explanation for "same brightness"); zero clipping
    invalidates the background floor.
@@ -71,7 +81,6 @@ Ordered roughly by when they will come up.
 
 - `_lng` morphology QA (paired side-by-side crops, optional structural similarity). The
   `pair_of` field already exists in the config.
-- Threshold-sensitivity sweep table (survival curves cover part of this).
 - Optional TIFF export of MIPs.
 - Handling more than one field per concentration (replicates or ipsilateral/contralateral),
   which needs an explicit aggregation design.

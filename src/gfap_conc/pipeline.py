@@ -15,7 +15,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .background import background_proxy_mask, background_stats, roi_mask, signal_metrics
+from .background import (
+    FLAG_MEANING,
+    PROXY_NOTE,
+    ROI_NOTE,
+    background_proxy_mask,
+    background_qc_flags,
+    background_stats,
+    roi_mask,
+    signal_metrics,
+    threshold_dependence,
+    threshold_sensitivity_rows,
+)
 from .config import AnalysisSettings
 from .depth import detect_signal_z_extent, middle_vs_outer, slice_profile
 from .histograms import histogram_table, integer_bin_edges, level_counts, quantiles_from_levels, survival_table
@@ -61,6 +72,71 @@ def _effective_mask(mask: np.ndarray) -> np.ndarray | None:
     return None if mask.all() else mask
 
 
+def data_origin(stacks: list[GFAPStack]) -> str:
+    """``synthetic`` | ``lif`` | ``unspecified``; mixing origins in one analysis is refused."""
+    def one(s: GFAPStack) -> str:
+        if s.source.startswith("synthetic"):
+            return "synthetic"
+        return "lif" if "::" in s.source else "unspecified"
+
+    origins = {one(s) for s in stacks}
+    if len(origins) > 1:
+        raise ValueError(f"stacks of different origin {sorted(origins)} cannot be analysed together")
+    return origins.pop()
+
+
+def compute_tissue_masks(
+    raw: list[GFAPStack],
+    settings: AnalysisSettings,
+    reference_images: dict[str, np.ndarray] | None = None,
+) -> dict[str, np.ndarray]:
+    """2-D tissue mask per raw stack, exactly as used by the analysis (and by `review`)."""
+    t = settings.tissue_mask
+    out = {}
+    for s in raw:
+        if t.reference == "gfap_mip":
+            ref = max_projection(s.data)
+        else:
+            if not reference_images or s.series_name not in reference_images:
+                raise ValueError(f"tissue mask needs a reference-channel image for {s.series_name!r}")
+            ref = reference_images[s.series_name]
+        tm = tissue_mask_2d(ref, t.method, t.threshold, t.sigma_px, t.min_object_px)
+        if not tm.any():
+            raise ValueError(f"tissue mask for {s.series_name!r} is empty; check tissue_mask settings")
+        out[s.series_name] = tm
+    return out
+
+
+def auto_z_range(stack: GFAPStack, tissue_mask: np.ndarray, settings: AnalysisSettings) -> tuple[int, int]:
+    prof = slice_profile(stack, _effective_mask(tissue_mask))
+    d = settings.depth
+    return detect_signal_z_extent(prof[d.auto_metric].to_numpy(), d.auto_rel_level)
+
+
+def resolve_z_ranges(
+    raw: list[GFAPStack], settings: AnalysisSettings, tissue: dict[str, np.ndarray]
+) -> tuple[dict[str, tuple[int, int]], list[str]]:
+    """Inclusive analysed slice range per stack for z_range = full | auto | manual."""
+    d = settings.depth
+    ranges, notes = {}, []
+    for s in raw:
+        if d.z_range == "auto":
+            zr = auto_z_range(s, tissue[s.series_name], settings)
+        elif d.z_range == "manual":
+            if s.series_name not in d.manual_z_ranges:
+                raise ValueError(f"z_range is manual but no range is configured for {s.series_name!r}")
+            z0, z1 = (int(v) for v in d.manual_z_ranges[s.series_name])
+            if not 0 <= z0 <= z1 <= s.n_z - 1:
+                raise ValueError(f"{s.series_name}: manual z-range [{z0}, {z1}] outside 0-{s.n_z - 1}")
+            zr = (z0, z1)
+        else:
+            zr = (0, s.n_z - 1)
+        if zr != (0, s.n_z - 1):
+            notes.append(f"{s.series_name}: {d.z_range} z-range keeps slices {zr[0]}-{zr[1]} of 0-{s.n_z - 1}")
+        ranges[s.series_name] = zr
+    return ranges, notes
+
+
 def run_analysis(
     stacks: list[GFAPStack],
     settings: AnalysisSettings,
@@ -89,25 +165,13 @@ def run_analysis(
         warnings.append(f"No raw stack for expected concentration(s): {sorted(missing, key=lambda c: int(c[2:]))}")
 
     a = settings
-    images: dict[str, dict[str, np.ndarray]] = {}
+    origin = data_origin(raw + excluded)
 
     # ---------------------------------------------------------------- masks
-    tissue: dict[str, np.ndarray] = {}
-    for s in raw:
-        mip = max_projection(s.data)
-        if a.tissue_mask.reference == "gfap_mip":
-            ref = mip
-        else:
-            if not reference_images or s.series_name not in reference_images:
-                raise ValueError(f"tissue mask needs a reference-channel image for {s.series_name!r}")
-            ref = reference_images[s.series_name]
-        tm = tissue_mask_2d(
-            ref, a.tissue_mask.method, a.tissue_mask.threshold, a.tissue_mask.sigma_px, a.tissue_mask.min_object_px
-        )
-        if not tm.any():
-            raise ValueError(f"tissue mask for {s.series_name!r} is empty; check tissue_mask settings")
-        tissue[s.series_name] = tm
-        images[s.series_name] = {"mip": mip, "tissue_mask": tm}
+    tissue = compute_tissue_masks(raw, a, reference_images)
+    images: dict[str, dict[str, np.ndarray]] = {
+        s.series_name: {"mip": max_projection(s.data), "tissue_mask": tissue[s.series_name]} for s in raw
+    }
 
     thr_spec = a.foreground.threshold
     if thr_spec is None:
@@ -121,15 +185,8 @@ def run_analysis(
         fg_threshold, fg_source = float(thr_spec), "fixed in config (raw counts)"
 
     # ------------------------------------------------------------ z ranges
-    z_ranges: dict[str, tuple[int, int]] = {}
-    for s in raw:
-        if a.depth.z_range == "auto":
-            prof = slice_profile(s, _effective_mask(tissue[s.series_name]))
-            z_ranges[s.series_name] = detect_signal_z_extent(prof[a.depth.auto_metric].to_numpy(), a.depth.auto_rel_level)
-            if z_ranges[s.series_name] != (0, s.n_z - 1):
-                warnings.append(f"{s.series_name}: auto z-range kept slices {z_ranges[s.series_name]} of 0-{s.n_z - 1}")
-        else:
-            z_ranges[s.series_name] = (0, s.n_z - 1)
+    z_ranges, z_notes = resolve_z_ranges(raw, a, tissue)
+    warnings += z_notes
 
     # ------------------------------------------- Analysis 1: projections
     proj_rows: list[dict] = []
@@ -167,7 +224,7 @@ def run_analysis(
             retention_rows.append({**s.identity(), "region": prof["region"].iloc[0], **r})
 
     # ------------------------------------------- Analysis 3: background
-    bg_rows = []
+    bg_rows, sens_rows = [], []
     for s, prof in zip(raw, profiles, strict=True):
         tm = tissue[s.series_name]
         tm_eff = _effective_mask(tm)
@@ -181,15 +238,23 @@ def run_analysis(
             fg3d = foreground_mask(data, fg_threshold) & tissue3d
             bg3d = background_proxy_mask(fg3d, tm_eff, r)
             bg = background_stats(data, bg3d, n_tissue_vox)
-            if bg["bg_n_pixels"] == 0:
-                warnings.append(f"{s.series_name}: no background-proxy pixels (everything within {r} px of "
-                                "foreground); background and SBR undefined - revisit threshold/radius")
-            elif bg["bg_fraction_of_reference"] < 0.05:
-                warnings.append(f"{s.series_name}: background proxy covers only "
-                                f"{bg['bg_fraction_of_reference']:.1%} of tissue voxels")
+
+            # threshold-sensitivity diagnostic (shared multiples of the one shared threshold)
+            sens = threshold_sensitivity_rows(
+                data, tm_eff, [(f, f * fg_threshold) for f in sorted(a.foreground.sensitivity_factors)], r
+            )
+            sens_rows += [{**common, "exclusion_radius_px": r, **row} for row in sens]
+            dep = threshold_dependence(sens)
+            flags = background_qc_flags(bg, dep, a.background.qc_max_fraction_of_tissue,
+                                        a.background.qc_max_tail_asymmetry, a.background.qc_max_threshold_dependence)
+            for f in flags:
+                warnings.append(f"{s.series_name} [{s.concentration}] background proxy {f}: {FLAG_MEANING[f]}. "
+                                "Do not read this background value as autofluorescence.")
             bg_rows.append(
                 {**common, "background_method": "proxy_stack_3d", "foreground_threshold": fg_threshold,
-                 "exclusion_radius_px": r, **bg, **signal_metrics(data, fg3d, bg)}
+                 "exclusion_radius_px": r, **bg, "bg_threshold_dependence": dep,
+                 "bg_qc_flags": ";".join(flags) or "none", "interpretation_note": PROXY_NOTE,
+                 **signal_metrics(data, fg3d, bg)}
             )
             mip = images[s.series_name]["mip"]
             fg2d = foreground_mask(mip, fg_threshold) & tm
@@ -198,6 +263,7 @@ def run_analysis(
             bg_rows.append(
                 {**common, "background_method": "proxy_mip_2d (inflated by max over z)",
                  "foreground_threshold": fg_threshold, "exclusion_radius_px": r, **bgm,
+                 "bg_qc_flags": "visual QA only", "interpretation_note": PROXY_NOTE,
                  **signal_metrics(mip, fg2d, bgm)}
             )
             images[s.series_name]["bg_proxy_mip"] = bg2d
@@ -217,10 +283,23 @@ def run_analysis(
             m2 = roi_mask(tm.shape, rois)
             m3 = np.broadcast_to(m2, data.shape)
             bg = background_stats(data, m3, n_tissue_vox)
-            row = {**common, "background_method": "manual_roi_stack", "manual_rois": str(rois), **bg}
+            row = {**common, "background_method": "manual_roi_stack", "manual_rois": str(rois), **bg,
+                   "interpretation_note": ROI_NOTE}
             if fg_threshold is not None:
                 row.update(signal_metrics(data, foreground_mask(data, fg_threshold) & tissue3d, bg))
             bg_rows.append(row)
+
+    proxy = [r for r in bg_rows if r["background_method"] == "proxy_stack_3d" and np.isfinite(r["bg_median"])]
+    if len(proxy) >= 3:
+        meds = [r["bg_median"] for r in sorted(proxy, key=lambda r: r["dilution_factor"])]
+        # never decreasing with dilution and >5% higher at the weakest stain than at the strongest
+        if all(b >= a_ for a_, b in zip(meds, meds[1:], strict=False)) and meds[-1] > 1.05 * meds[0]:
+            warnings.append(
+                "Background proxy RISES as the primary is diluted (" + ", ".join(
+                    f"{r['concentration']}={r['bg_median']:.4g}" for r in sorted(proxy, key=lambda r: r["dilution_factor"]))
+                + "). Less antibody should not create more background; this pattern is expected when faint GFAP "
+                "of weaker stains falls below the shared threshold. Do not interpret it as autofluorescence."
+            )
 
     # ------------------------------------------- Analysis 4: histograms
     max_value = max(s.saturation_value for s in raw)
@@ -287,8 +366,12 @@ def run_analysis(
         "intensity_histogram": pd.concat(hist_parts, ignore_index=True),
         "intensity_survival": pd.concat(surv_parts, ignore_index=True),
         "histogram_quantiles": pd.DataFrame(quant_rows),
+        "threshold_sensitivity": pd.DataFrame(sens_rows),
     }
+    for df in tables.values():
+        df.insert(0, "data_origin", origin)
     params = {
+        "data_origin": origin,
         "foreground_threshold": fg_threshold,
         "foreground_threshold_source": fg_source,
         "histogram_max_value": int(max_value),

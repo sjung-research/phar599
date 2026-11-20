@@ -24,6 +24,26 @@ from the channel's `Resolution` metadata.
 - **One stack per concentration:** more than one raw stack for a concentration is an
   error. Replicate or field aggregation must be designed explicitly, not pooled silently.
 
+## 0b. Review gate and data origin
+
+- **Review is mandatory before any concentration comparison.** `gfap-conc review` writes
+  QA figures for the tissue mask and z-range, but no comparison numbers.
+  `reviewed_settings_sha256` is the SHA-256 of: the input-file checksum, GFAP and reference
+  channels, bit-depth override, series list, all tissue-mask settings, and z-range mode,
+  auto parameters and manual ranges. `run` requires `tissue_mask_confirmed`,
+  `z_range_confirmed` and a matching hash. With `--allow-unreviewed`, outputs are written
+  to `preliminary_run_*` and marked PRELIMINARY in every figure, the summary, the manifest
+  and the QC warnings. Settings that do not affect masking or depth (e.g. display
+  percentile) do not void a review.
+- **z-range modes:**
+  - `full`: all slices.
+  - `manual`: inclusive `[first, last]` per series, chosen in review from the XZ view and
+    profiles, before looking at concentration results.
+  - `auto`: an unvalidated level-crossing rule, shown in review as a candidate.
+- **`data_origin`** (`synthetic` | `lif` | `unspecified`) is the first column of every
+  output table and is recorded in the manifest. Stacks of different origin cannot be
+  analysed together.
+
 ## 1. Max-intensity projection
 
 - `MIP[y, x] = max_z I[z, y, x]` (full stack; `projection = mip_full_stack`).
@@ -63,9 +83,10 @@ from the channel's `Resolution` metadata.
   `middle_over_last` and `middle_over_outer_mean`. First and last are reported separately,
   because orientation relative to the coverslip is unknown and profiles are rarely
   symmetric.
-- **Analysed z-range:** `full` by default. `auto` keeps slices between the first and last
-  crossing of `min + 0.5·(max − min)` of the per-slice `p99_8`. It is meant to trim slices
-  outside the tissue and is **unvalidated**.
+- **Analysed z-range:** `full` by default; `manual` (chosen in review) is the intended
+  choice if trimming is needed. `auto` keeps slices between the first and last crossing of
+  `min + 0.5·(max − min)` of the per-slice `p99_8`. It is meant to trim slices outside the
+  tissue and is **unvalidated**.
 - Nominal z is not corrected for refractive-index mismatch.
 - **Pitfall: ratios on raw values include the background floor.** An additive background
   that does not attenuate with depth pulls `middle_over_*` toward 1, so a **dimmer stain can
@@ -101,6 +122,34 @@ from the channel's `Resolution` metadata.
   `test_background_rows_labelled_as_proxy`. Check `figures/background_ROI_overlays.png`,
   compare `bg_p05`/`bg_p25` with `bg_median`, and treat signal-to-background differences
   between concentrations cautiously.
+- **Background QC flags** (`bg_qc_flags`; each also produces a warning stating that the
+  value must not be read as autofluorescence):
+
+  | Flag | Rule (defaults in config) | Meaning |
+  |---|---|---|
+  | `LARGE_REGION` | proxy > 85% of tissue voxels | the shared threshold lies above much of this stain's real signal |
+  | `SMALL_REGION` | proxy < 5% of tissue voxels | estimate rests on few, possibly atypical voxels |
+  | `EMPTY_REGION` | no proxy voxels | background and SBR undefined |
+  | `RIGHT_TAIL` | `bg_tail_asymmetry = (p95 − median)/(median − p05)` > 2 | upper tail typical of faint processes; noise-like background is ≈ 1 |
+  | `THRESHOLD_DEPENDENT` | \|median(1.25·T) − median(0.75·T)\| / median(T) > 0.10 | proxy contains sub-threshold signal |
+
+  Across concentrations, a warning is also issued if the proxy median never decreases with
+  dilution and is more than 5% higher at the weakest than at the strongest stain. Less
+  antibody should not create more background, so this pattern points to faint GFAP in the
+  proxy rather than to autofluorescence.
+- **Threshold sensitivity** (`threshold_sensitivity.csv`, `figures/threshold_sensitivity.png`):
+  the 3-D proxy and foreground are recomputed at `factor × T` for factors
+  0.5, 0.75, 1, 1.25, 1.5 and 2. The same absolute threshold is used for every
+  concentration at each factor. The factor-1.0 row equals the main background row (tested).
+  Reading the plot:
+  - a background median that stays flat as T rises supports a noise-like proxy;
+  - one that climbs means the proxy absorbs real signal at higher T;
+  - the SBR panel shows how strongly any SBR comparison depends on the choice of T.
+
+  This is a diagnostic. The analysis itself always uses factor 1.0.
+- **Error bars** in `background_comparison.png` are `bg_robust_sd`: within-image spatial and
+  noise spread of the proxy voxels of one field. They are not confidence intervals and not
+  biological-replicate uncertainty (n = 1 field per concentration).
 - A low-intensity proxy is **not** a measurement of autofluorescence. Perfusion
   autofluorescence, non-specific binding and detector offset cannot be distinguished
   without no-primary controls.
@@ -120,7 +169,8 @@ from the channel's `Resolution` metadata.
   - `mip_all_pixels`: projected structure;
   - `stack_all_voxels`: every voxel in the analysed z-range;
   - `*_tissue` variants when a tissue mask is used.
-- **Survival:** `fraction_at_or_above(T)` for each bin edge T. This is the fraction of
+- **Survival:** `fraction_at_or_above(T)` for each bin edge T, i.e. the fraction of
+  pixels (MIP sources) or voxels (stack sources) ≥ T. This is the fraction of
   pixels above any threshold, so it avoids committing to a single threshold.
 - **Quantiles:** `q0.5 … q0.998` are lower inverted-CDF quantiles from the level counts.
   They can differ slightly from the interpolated `p99_8` in other tables.

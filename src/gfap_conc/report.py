@@ -31,7 +31,7 @@ def _git(*args: str) -> str | None:
 
 
 def write_manifest(out_dir: Path, *, config: dict, config_sha256: str, provenance: dict,
-                   result: AnalysisResult, synthetic: bool) -> Path:
+                   result: AnalysisResult, synthetic: bool, review: dict) -> Path:
     versions = {}
     for p in PACKAGES:
         try:
@@ -41,6 +41,8 @@ def write_manifest(out_dir: Path, *, config: dict, config_sha256: str, provenanc
     manifest = {
         "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "synthetic_data": synthetic,
+        "data_origin": result.params.get("data_origin"),
+        "review_status": review,
         "git_commit": _git("rev-parse", "HEAD"),
         "git_dirty": bool(_git("status", "--porcelain")),
         "python": sys.version.split()[0],
@@ -94,12 +96,16 @@ For each concentration, address:
 
 
 def write_summary(out_dir: Path, result: AnalysisResult, *, provenance: dict, config_sha256: str,
-                  synthetic: bool, figures: list[Path]) -> Path:
+                  synthetic: bool, figures: list[Path], review: dict) -> Path:
     t = result.tables
     parts = ["# GFAP concentration curve - numeric summary (auto-generated)\n"]
+    parts.append(f"Data origin: **{result.params.get('data_origin')}**. Review status: **{review['status']}**.\n")
     if synthetic:
         parts.append("> **SYNTHETIC DATA.** Generated to exercise the pipeline. These numbers are not experimental "
                      "results and must not be reported.\n")
+    elif review["status"] != "confirmed":
+        parts.append("> **PRELIMINARY.** Tissue mask and/or z-range were not confirmed by review for these settings "
+                     "(" + "; ".join(review.get("reasons", [])) + "). Do not compare concentrations from this run.\n")
     parts.append("Raw (non-deconvolved) series only. All intensities are unscaled source values "
                  f"({result.raw_stacks[0].intensity_unit}). No interpretation is contained in this file.\n")
     parts.append("## Provenance\n")
@@ -133,9 +139,23 @@ def write_summary(out_dir: Path, result: AnalysisResult, *, provenance: dict, co
                                                           "middle_over_last", "depth_cv"]))
 
     parts.append("## 3. Background (proxy unless stated)\n")
+    parts.append("A background **proxy** is low-intensity tissue away from the shared-threshold foreground. "
+                 "It is not a measurement of autofluorescence. A proxy that is higher for one concentration may "
+                 "reflect faint GFAP below the threshold, not tissue autofluorescence. Check `bg_qc_flags` "
+                 "and the threshold-sensitivity table first. `bg_robust_sd` is within-image spread "
+                 "(1.4826 × MAD), not replicate uncertainty.\n")
     parts.append(md_table(t["background_summary"], ["concentration", "background_method", "bg_median",
-                                                     "bg_robust_sd", "bg_fraction_of_reference", "fg_median",
+                                                     "bg_robust_sd", "bg_fraction_of_reference", "bg_tail_asymmetry",
+                                                     "bg_threshold_dependence", "bg_qc_flags", "fg_median",
                                                      "signal_to_background", "contrast_to_noise"]))
+    sens = t.get("threshold_sensitivity")
+    if sens is not None and not sens.empty:
+        parts.append("### Threshold sensitivity (diagnostic)\n")
+        parts.append("Same exclusion rule re-run at multiples of the one shared threshold, identically for all "
+                     "concentrations. The analysis itself uses factor 1.0.\n")
+        parts.append(md_table(sens, ["concentration", "threshold_factor", "foreground_threshold",
+                                     "fg_fraction_of_tissue", "bg_fraction_of_reference", "bg_median",
+                                     "bg_tail_asymmetry", "signal_to_background"]))
 
     parts.append("## 4. Histogram quantiles (exact, from integer level counts)\n")
     parts.append(md_table(t["histogram_quantiles"], ["concentration", "source", "n_pixels", "q0.5", "q0.9",

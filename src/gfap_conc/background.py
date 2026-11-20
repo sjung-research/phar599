@@ -72,20 +72,34 @@ def background_stats(values: np.ndarray, mask: np.ndarray, reference_count: int 
             "bg_n_pixels": 0,
             "bg_fraction_of_reference": 0.0 if reference_count else np.nan,
             **dict.fromkeys(
-                ["bg_median", "bg_mean", "bg_robust_sd", "bg_p05", "bg_p25", "bg_frac_zero"], np.nan
+                ["bg_median", "bg_mean", "bg_robust_sd", "bg_p05", "bg_p25", "bg_p95", "bg_tail_asymmetry",
+                 "bg_frac_zero"], np.nan
             ),
         }
-    p05, p25 = np.percentile(v, [5.0, 25.0])
+    p05, p25, p50, p95 = np.percentile(v, [5.0, 25.0, 50.0, 95.0])
     return {
         "bg_n_pixels": n,
         "bg_fraction_of_reference": n / reference_count if reference_count else np.nan,
-        "bg_median": float(np.median(v)),
+        "bg_median": float(p50),
         "bg_mean": float(np.mean(v, dtype=np.float64)),
         "bg_robust_sd": robust_sd(v),
         "bg_p05": float(p05),
         "bg_p25": float(p25),
+        "bg_p95": float(p95),
+        "bg_tail_asymmetry": tail_asymmetry(p05, p50, p95),
         "bg_frac_zero": float(np.count_nonzero(v == 0)) / n,
     }
+
+
+def tail_asymmetry(p05: float, p50: float, p95: float) -> float:
+    """``(p95 - median) / (median - p05)``: ~1 for symmetric noise, >1 for a right tail.
+
+    A pure background (detector noise, uniform autofluorescence) is roughly
+    symmetric; faint GFAP processes that fall below the shared threshold add a
+    right tail to the proxy distribution.
+    """
+    lower = p50 - p05
+    return float((p95 - p50) / lower) if lower > 0 else np.nan
 
 
 def signal_metrics(values: np.ndarray, foreground: np.ndarray, bg: dict) -> dict:
@@ -102,3 +116,89 @@ def signal_metrics(values: np.ndarray, foreground: np.ndarray, bg: dict) -> dict
         "signal_to_background": fg_median / bg_med if bg_med and bg_med > 0 else np.nan,
         "contrast_to_noise": (fg_median - bg_med) / bg_sd if bg_sd and bg_sd > 0 else np.nan,
     }
+
+
+PROXY_NOTE = ("proxy: tissue voxels below the shared foreground threshold and away from foreground; "
+              "NOT a measurement of autofluorescence (cause cannot be determined from these images)")
+ROI_NOTE = "manual ROI in original pixel coordinates; content assumed GFAP-free by the user, not verified"
+
+
+def threshold_sensitivity_rows(
+    data: np.ndarray,
+    tissue_mask_2d: np.ndarray | None,
+    thresholds: Sequence[tuple[float, float]],
+    exclusion_radius_px: int,
+) -> list[dict]:
+    """Re-estimate foreground and background proxy at several shared thresholds.
+
+    ``thresholds`` are ``(factor, absolute_threshold)`` pairs. Diagnostic only: the
+    analysis itself always uses factor 1.0. A background median that stays flat across
+    reasonable thresholds supports the proxy; one that climbs with the threshold means
+    sub-threshold GFAP signal is being counted as background.
+    """
+    data = np.asarray(data)
+    tm = None if tissue_mask_2d is None else np.asarray(tissue_mask_2d, bool)
+    tissue3d = np.ones(data.shape, bool) if tm is None else np.broadcast_to(tm, data.shape)
+    n_tissue = int(np.count_nonzero(tissue3d))
+    rows = []
+    for factor, thr in thresholds:
+        fg = (data >= thr) & tissue3d
+        bg_mask = background_proxy_mask(fg, tm, exclusion_radius_px)
+        bg = background_stats(data, bg_mask, n_tissue)
+        rows.append({
+            "threshold_factor": float(factor),
+            "foreground_threshold": float(thr),
+            "fg_fraction_of_tissue": int(np.count_nonzero(fg)) / n_tissue if n_tissue else np.nan,
+            **bg,
+            **signal_metrics(data, fg, bg),
+        })
+    return rows
+
+
+def threshold_dependence(sens_rows: Sequence[dict]) -> float:
+    """Relative change of the proxy median between the factors bracketing 1.0.
+
+    ``(median(f_hi) - median(f_lo)) / median(1.0)`` with f_lo/f_hi the nearest factors
+    below/above 1.0. NaN if either side is missing.
+    """
+    by_f = {r["threshold_factor"]: r["bg_median"] for r in sens_rows}
+    lo = [f for f in by_f if f < 1.0]
+    hi = [f for f in by_f if f > 1.0]
+    ref = by_f.get(1.0, np.nan)
+    if not lo or not hi or not ref or not np.isfinite(ref) or ref <= 0:
+        return np.nan
+    return float((by_f[min(hi)] - by_f[max(lo)]) / ref)
+
+
+def background_qc_flags(
+    bg: dict,
+    dependence: float,
+    max_fraction: float,
+    max_tail_asymmetry: float,
+    max_dependence: float,
+) -> list[str]:
+    """Machine-readable reasons to distrust a background-proxy estimate."""
+    flags = []
+    if bg.get("bg_n_pixels", 0) == 0:
+        return ["EMPTY_REGION"]
+    frac = bg.get("bg_fraction_of_reference", np.nan)
+    if np.isfinite(frac) and frac > max_fraction:
+        flags.append("LARGE_REGION")
+    if np.isfinite(frac) and frac < 0.05:
+        flags.append("SMALL_REGION")
+    tail = bg.get("bg_tail_asymmetry", np.nan)
+    if np.isfinite(tail) and tail > max_tail_asymmetry:
+        flags.append("RIGHT_TAIL")
+    if np.isfinite(dependence) and abs(dependence) > max_dependence:
+        flags.append("THRESHOLD_DEPENDENT")
+    return flags
+
+
+FLAG_MEANING = {
+    "EMPTY_REGION": "no voxels qualify as background; background and SBR undefined",
+    "SMALL_REGION": "fewer than 5% of tissue voxels qualify; estimate rests on few, possibly atypical voxels",
+    "LARGE_REGION": "most tissue voxels are classed as background; the shared threshold may lie above much "
+                    "of this stain's real GFAP signal",
+    "RIGHT_TAIL": "proxy intensities have a long upper tail, as expected if faint GFAP processes are included",
+    "THRESHOLD_DEPENDENT": "proxy median changes with the threshold, i.e. it contains sub-threshold signal",
+}

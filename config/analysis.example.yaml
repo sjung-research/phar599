@@ -1,12 +1,16 @@
 # GFAP concentration-curve analysis - configuration template.
 #
-# Workflow:
+# Workflow (real data):
 #   1. uv run gfap-conc inspect data/raw/<file>.lif
-#   2. Review results/inspect_*/series_inventory.csv, acquisition_comparability_raw.csv
+#   2. Check results/inspect/*/series_inventory.csv, acquisition_comparability_raw.csv
 #      and lif_xml_header.xml. Confirm every name/concentration with Rose if ambiguous.
 #   3. Copy this file to config/analysis.yaml, fill in the values marked REQUIRED
 #      (config_suggestion.yaml from step 1 has the series names and the checksum).
-#   4. uv run gfap-conc run --config config/analysis.yaml
+#   4. uv run gfap-conc review --config config/analysis.yaml
+#      -> inspect the tissue-mask and z-range figures, adjust settings, re-run review,
+#         then fill in the `review:` block below with the printed hash.
+#   5. uv run gfap-conc run --config config/analysis.yaml
+#      (refuses to compare concentrations until step 4 is recorded for the current settings)
 #
 # Relative paths are resolved relative to THIS file's directory.
 
@@ -40,13 +44,18 @@ analysis:
     threshold: pooled_otsu        # number (raw counts) | pooled_otsu | null. ONE value for all concentrations.
     sample_per_stack: 200000
     seed: 0
+    sensitivity_factors: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]   # diagnostic re-runs at multiples of the threshold
 
   background:
     exclusion_radius_px: 5        # XY distance kept away from foreground for the background proxy
+    qc_max_fraction_of_tissue: 0.85    # warn: proxy covers most of the tissue
+    qc_max_tail_asymmetry: 2.0         # warn: (p95-median)/(median-p05) of proxy voxels (faint GFAP tail)
+    qc_max_threshold_dependence: 0.10  # warn: proxy median changes >10% between 0.75x and 1.25x threshold
     manual_rois: {}               # {"<series name>": [[y0, y1, x0, x1], ...]}  half-open, original pixels
 
   depth:
-    z_range: full                 # full | auto (level-crossing trim of out-of-tissue slices; unvalidated)
+    z_range: full                 # full | auto (level-crossing trim; unvalidated) | manual (chosen in review)
+    manual_z_ranges: {}           # for manual: {"<series name>": [first, last]}  inclusive slice indices
     auto_metric: p99_8
     auto_rel_level: 0.5
     window_fraction: 0.2          # first / middle / last windows = 20% of analysed slices each
@@ -56,4 +65,13 @@ analysis:
     n_bins: 256                   # integer-aligned; actual width recorded in run_manifest.json
     zoom_max: null                # null -> 1.2 x largest per-image MIP p99.8
 
-output_dir: ../results            # each run writes a new timestamped sub-directory; never overwrites
+# Filled in AFTER `gfap-conc review`. The hash ties the confirmation to the exact input file,
+# channel, series and tissue-mask / z-range settings; changing any of them voids it.
+review:
+  tissue_mask_confirmed: false
+  z_range_confirmed: false
+  reviewed_settings_sha256: null
+  reviewed_by: null
+  notes: ""                       # what was checked; whether the four fields are comparable regions
+
+output_dir: ../results/real       # real-data outputs only; synthetic demo writes to results/synthetic/
