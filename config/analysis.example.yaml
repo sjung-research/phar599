@@ -1,0 +1,59 @@
+# GFAP concentration-curve analysis - configuration template.
+#
+# Workflow:
+#   1. uv run gfap-conc inspect data/raw/<file>.lif
+#   2. Review results/inspect_*/series_inventory.csv, acquisition_comparability_raw.csv
+#      and lif_xml_header.xml. Confirm every name/concentration with Rose if ambiguous.
+#   3. Copy this file to config/analysis.yaml, fill in the values marked REQUIRED
+#      (config_suggestion.yaml from step 1 has the series names and the checksum).
+#   4. uv run gfap-conc run --config config/analysis.yaml
+#
+# Relative paths are resolved relative to THIS file's directory.
+
+input:
+  lif_path: ../data/raw/REPLACE_ME.lif   # REQUIRED; the file is opened read-only
+  lif_sha256: null                       # recommended: copy from inspect output; run aborts on mismatch
+  gfap_channel: null                     # REQUIRED: index along C (see series_inventory.csv). Never DAPI.
+  reference_channel: null                # e.g. DAPI index; used ONLY if tissue_mask.reference = reference_channel_mip
+  bit_depth_override: null               # leave null to use the per-channel 'Resolution' from metadata
+
+# One entry per image used. Names must match `series_path` in series_inventory.csv exactly.
+# kind: raw | deconvolved. Deconvolved (_lng) series are excluded from every intensity table.
+series:
+  - {name: "REPLACE_ME 1:250",      concentration: "1:250",  kind: raw}
+  - {name: "REPLACE_ME 1:500",      concentration: "1:500",  kind: raw}
+  - {name: "REPLACE_ME 1:1000",     concentration: "1:1000", kind: raw}
+  - {name: "REPLACE_ME 1:2000",     concentration: "1:2000", kind: raw}
+  # - {name: "REPLACE_ME 1:250_lng", concentration: "1:250", kind: deconvolved, pair_of: "REPLACE_ME 1:250"}
+
+analysis:
+  display_percentile: 99.8        # Rose's "normalization max"; affects display ranges ONLY
+
+  tissue_mask:
+    method: none                  # none (whole field = tissue) | absolute | otsu  -- decide after seeing images
+    reference: gfap_mip           # gfap_mip | reference_channel_mip (e.g. DAPI, for locating tissue only)
+    threshold: null               # required for method: absolute (raw counts of the smoothed reference)
+    sigma_px: 2.0
+    min_object_px: 500
+
+  foreground:
+    threshold: pooled_otsu        # number (raw counts) | pooled_otsu | null. ONE value for all concentrations.
+    sample_per_stack: 200000
+    seed: 0
+
+  background:
+    exclusion_radius_px: 5        # XY distance kept away from foreground for the background proxy
+    manual_rois: {}               # {"<series name>": [[y0, y1, x0, x1], ...]}  half-open, original pixels
+
+  depth:
+    z_range: full                 # full | auto (level-crossing trim of out-of-tissue slices; unvalidated)
+    auto_metric: p99_8
+    auto_rel_level: 0.5
+    window_fraction: 0.2          # first / middle / last windows = 20% of analysed slices each
+    retention_metrics: [mean, median, p99_8]
+
+  histogram:
+    n_bins: 256                   # integer-aligned; actual width recorded in run_manifest.json
+    zoom_max: null                # null -> 1.2 x largest per-image MIP p99.8
+
+output_dir: ../results            # each run writes a new timestamped sub-directory; never overwrites

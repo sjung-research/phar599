@@ -1,0 +1,22 @@
+# environment
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# microscopy data never goes into git (size, provenance); reference it by path + sha256
+*.lif
+*.lof
+*.xlif
+*.xlef
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# run outputs are regenerated from code + config
+results/*
+!results/.gitkeep
+
+# local configs that point at personal paths
+config/analysis.yaml
