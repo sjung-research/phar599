@@ -151,6 +151,7 @@ def test_cli_inspect_review_run_on_test_lif(tmp_path, rng):
     man = json.loads((prelim / "run_manifest.json").read_text(encoding="utf-8"))
     assert man["review_status"]["status"].startswith("PRELIMINARY") and man["data_origin"] == "lif"
     assert (prelim / "qc_warnings.txt").read_text(encoding="utf-8").startswith("PRELIMINARY")
+    assert "deconvolved series not loaded" in (prelim / "qc_warnings.txt").read_text(encoding="utf-8")
 
     # 3. review -> record confirmation with hash -> confirmed run
     assert main(["review", "--config", str(cfg_path), "--out", str(tmp_path / "review")]) == 0
@@ -209,6 +210,17 @@ def test_identical_maxima_far_below_ceiling_warned():
         d[:, :2, :] = 1420 - i  # common effective ceiling
         stacks.append(make_stack(d, c, bit_depth=16, name=c))
     res = run_analysis(stacks, AnalysisSettings())
-    assert any("EFFECTIVE detector ceiling" in w for w in res.warnings)
+    assert any("HARD clipping" in w for w in res.warnings)
     qc = res.tables["qc_stack_summary"]
     assert (qc["n_at_observed_max"] == 6 * 2 * 16).all()
+
+
+def test_identical_maxima_without_pileup_reports_soft_compression_caveat():
+    stacks = []
+    for i, c in enumerate(("1:250", "1:500")):
+        d = np.full((6, 16, 16), 50, np.uint16)
+        d[0, 0, 0] = 1429 - 8 * i  # single brightest voxel, no pile-up
+        stacks.append(make_stack(d, c, bit_depth=16, name=c))
+    res = run_analysis(stacks, AnalysisSettings())
+    w = [x for x in res.warnings if "nearly identical" in x]
+    assert w and "no hard clipping" in w[0] and "NOT excluded" in w[0]

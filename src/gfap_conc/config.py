@@ -98,6 +98,9 @@ class InputSettings:
     gfap_channel: int | None = None  # REQUIRED; index in liffile's C order
     reference_channel: int | None = None  # e.g. DAPI, only for tissue masking
     bit_depth_override: int | None = None
+    #: unit label written on every table and figure, e.g. "photon counts" once the detector
+    #: mode is confirmed from the acquisition settings. Labels only; values are never rescaled.
+    intensity_unit: str = "raw counts"
 
 
 @dataclass

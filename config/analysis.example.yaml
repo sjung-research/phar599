@@ -20,6 +20,7 @@ input:
   gfap_channel: null                     # REQUIRED: index along C (see series_inventory.csv). Never DAPI.
   reference_channel: null                # e.g. DAPI index; used ONLY if tissue_mask.reference = reference_channel_mip
   bit_depth_override: null               # leave null to use the per-channel 'Resolution' from metadata
+  intensity_unit: raw counts             # label only, e.g. "photon counts" once the detector mode is confirmed
 
 # One entry per image used. Names must match `series_path` in series_inventory.csv exactly.
 # kind: raw | deconvolved. Deconvolved (_lng) series are excluded from every intensity table.

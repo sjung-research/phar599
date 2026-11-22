@@ -9,7 +9,7 @@ import numpy as np
 
 from .config import ProjectConfig
 from .io_lif import companion_files, file_record, list_series, load_stack, read_channel, sha256_file
-from .model import GFAPStack
+from .model import GFAPStack, ImageKind
 from .projection import max_projection
 
 _NUCLEAR_RE = re.compile(r"dapi|hoechst|405", re.IGNORECASE)
@@ -48,9 +48,17 @@ def load_configured_stacks(
         warnings.append("input.lif_sha256 not set in config; input file identity was not verified")
 
     stacks, refs = [], {}
+    skipped = [s.name for s in cfg.series if s.kind is not ImageKind.RAW]
+    if skipped:
+        # Deconvolved images never enter intensity analyses, and morphology QA is not
+        # implemented yet, so their pixels are not loaded (saves memory).
+        warnings.append("Configured deconvolved series not loaded and excluded from all intensity analyses: "
+                        + ", ".join(skipped))
     for spec in cfg.series:
+        if spec.kind is not ImageKind.RAW:
+            continue
         st = load_stack(lif, spec.name, cfg.input.gfap_channel, spec.concentration, spec.kind,
-                        cfg.input.bit_depth_override)
+                        cfg.input.bit_depth_override, cfg.input.intensity_unit)
         stacks.append(st)
         if cfg.analysis.tissue_mask.reference == "reference_channel_mip":
             if cfg.input.reference_channel is None:

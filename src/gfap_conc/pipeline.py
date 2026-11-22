@@ -363,12 +363,19 @@ def run_analysis(
     hi, lo = max(maxes.values()), min(maxes.values())
     nominal = min(s.saturation_value for s in raw)
     if len(maxes) >= 2 and hi > 0 and (hi - lo) / hi < 0.02 and hi < 0.5 * nominal:
+        pile = {r["concentration"]: r["n_at_observed_max"] for r in qc_rows}
+        clipped = any(n > 10 for n in pile.values())
+        detail = (
+            "Voxels pile up at the maximum, consistent with HARD clipping at an effective ceiling."
+            if clipped else
+            "Only a few voxels sit at each maximum, so there is no hard clipping; gradual (soft) compression of "
+            "the brightest signal, e.g. photon-counting dead-time non-linearity, is NOT excluded by this check."
+        )
         warnings.append(
             "Raw maxima are nearly identical across concentrations ("
             + ", ".join(f"{c}={v:.0f}" for c, v in maxes.items())
-            + f") and far below the nominal ceiling ({nominal}). This can indicate an EFFECTIVE detector ceiling "
-            "(e.g. photon-counting limit) that clips the brightest structures, which saturation_fraction cannot "
-            "detect. Check the top histogram bins, n_at_observed_max and the detector mode before comparing brightness."
+            + f") and far below the nominal ceiling ({nominal}). {detail} saturation_fraction cannot detect either; "
+            "compare the upper tails of the survival curves before comparing brightness."
         )
 
     tables = {

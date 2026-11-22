@@ -312,6 +312,7 @@ def load_stack(
     concentration: str,
     kind: ImageKind | str,
     bit_depth_override: int | None = None,
+    intensity_unit: str = "raw counts",
 ) -> GFAPStack:
     arr, meta = read_channel(path, series_path, channel)
     bits = bit_depth_override or meta.channels[channel].resolution_bits
@@ -324,7 +325,7 @@ def load_stack(
         bit_depth=bits,
         z_step_um=meta.z_step_um,
         pixel_size_um=meta.pixel_size_um,
-        intensity_unit="raw counts",
+        intensity_unit=intensity_unit,
         source=f"{Path(path).name}::{series_path}",
     )
 

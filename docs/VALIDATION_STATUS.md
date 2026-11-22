@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 87 tests)
+## Verified now (synthetic data, `uv run pytest`, 88 tests)
 
 | Component | What the tests establish |
 |---|---|
@@ -34,11 +34,29 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 - Channels (dye names from metadata): 0 = `DAPI`, 1 = `ALEXA 647`.
 - Raw images: 2200 × 1500 px, z-step 1.0007 µm, 21/24/23/23 slices (about 20–23 µm, not
   50 µm), `Resolution` 16 bit.
-- **Open issue:** raw AF647 maxima are 1429/1421/1419/1418, nearly identical across an
-  8-fold dilution range and far below 65535. Possible causes are an effective detector
-  ceiling (e.g. photon counting) or genuinely equal peak brightness. Saturation at 65535 is
-  0%, which is uninformative here. Check the detector mode in the acquisition settings,
-  `n_at_raw_max`, and the top histogram bins. The pipeline now warns about this pattern.
+- **Acquisition settings are identical for the four raw images** (from
+  `acquisition_comparability_raw.csv`). Only z start/end, number of sections, stage XY
+  position, z position and the setting name differ. Shared settings:
+  - objective HC PL APO CS2 20x/0.75 **DRY**, zoom 2;
+  - pixel 0.132 µm, field about 291 × 198 µm;
+  - pinhole 1.0 AU;
+  - scan speed 400, line accumulation 4, frame average 2;
+  - 638 nm laser at 2.5% (AF647) and 405 nm at 2% (DAPI);
+  - detectors HyD S 3 (AF647) and HyD S 2 (DAPI): SiPM in **PhotonCounting** mode, gain 2.5,
+    offset 0.
+
+  Absolute photon counts are therefore comparable at the acquisition level.
+- **Four different stage positions** (X = 66.6 / 62.2 / 57.8 / 53.2 mm, about 4.4 mm
+  apart). These are most likely four different sections, so region comparability (which
+  part of the cord was imaged) must be confirmed with Rose.
+- **Dry objective:** the axial step is nominal. Refractive-index mismatch between air and
+  the mounting medium means the true depth into tissue is likely larger than the stage
+  travel. Depth profiles are reported in nominal µm.
+- **Nearly identical maxima** (AF647 1429/1421/1419/1418): only **one voxel** sits at each
+  maximum and about 10⁻⁶ of voxels are within 2% of it, so there is **no hard clipping**.
+  Soft compression of the brightest signal by photon-counting dead time cannot be excluded
+  from these numbers. The upper tails of the survival curves will be checked, and the
+  question raised with Rose.
 
 ## Requires the real `.lif` before results can be trusted
 
