@@ -104,6 +104,20 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 - `p99_8` lies within 5% of the near-identical maxima (~1355 vs ~1420) in every stack, so it
   sits in the range where any soft detector compression would act. p99.8-based depth
   ratios may understate the mid-depth dip; mean-based ratios are less exposed.
+- **Re-run with 6-count bins (2026-11-22): soft detector compression is now strongly
+  indicated.**
+  - In all four stacks, the voxel-intensity density falls smoothly on a log scale up to
+    ~1250 counts, then shows a **local bump at ~1300–1340 counts followed by a cliff to
+    ~1420**. All four have the bump at the same place, although they are different sections.
+  - A smooth biological distribution would not do this; compression of the brightest
+    signal into a band below an effective ceiling would.
+  - About 0.1% of stack voxels (above ~1250 counts) lie in this band. In the MIPs the share
+    is much larger: MIP p99 is 1252–1327 and p99.8 is 1352–1364.
+  - Consequence: maxima, MIP p99.8 and surface values of the per-slice p99.8 measure the
+    ceiling, not the stain. Means, medians and the 100–1200-count part of the distribution
+    are unaffected.
+  - Confirmation requires a linearity test: the same field at two excitation powers or
+    accumulation settings.
 
 ## Requires the real `.lif` before results can be trusted
 
