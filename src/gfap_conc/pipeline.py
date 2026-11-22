@@ -303,7 +303,17 @@ def run_analysis(
             )
 
     # ------------------------------------------- Analysis 4: histograms
-    max_value = max(s.saturation_value for s in raw)
+    nominal_max = max(s.saturation_value for s in raw)
+    observed_max = max(int(s.data.max()) for s in raw)
+    rm = a.histogram.range_max
+    if rm == "nominal":
+        max_value, range_basis = nominal_max, "nominal (2**bits - 1)"
+    elif rm == "observed":
+        max_value, range_basis = observed_max, "observed maximum over all raw stacks"
+    else:
+        max_value, range_basis = int(rm), "fixed in config (counts)"
+        if max_value < observed_max:
+            raise ValueError(f"histogram.range_max {max_value} is below the observed maximum {observed_max}")
     edges = integer_bin_edges(max_value, a.histogram.n_bins)
     hist_parts, surv_parts, quant_rows = [], [], []
     for s in raw:
@@ -397,6 +407,7 @@ def run_analysis(
         "foreground_threshold": fg_threshold,
         "foreground_threshold_source": fg_source,
         "histogram_max_value": int(max_value),
+        "histogram_range_basis": range_basis,
         "histogram_bin_width": int(edges[1] - edges[0]),
         "z_ranges": {k: list(v) for k, v in z_ranges.items()},
         "matched_depth_windows": {k: {p: list(w) for p, w in v.items()} for k, v in windows.items()},

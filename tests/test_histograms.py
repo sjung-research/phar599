@@ -68,3 +68,22 @@ def test_survival_and_quantiles():
     assert s["fraction_at_or_above"].tolist() == [1.0, 0.5, 0.1, 0.0]
     q = quantiles_from_levels(levels, (0.5, 0.9))
     assert q == {"q0.5": 4, "q0.9": 8}
+
+
+def test_pipeline_histogram_range_observed_vs_nominal():
+    from conftest import make_stack
+
+    from gfap_conc.config import AnalysisSettings, HistogramSettings
+    from gfap_conc.pipeline import run_analysis
+
+    d = np.zeros((4, 16, 16), np.uint16)
+    d[:, :, :8] = 1429  # photon-count-like data far below the 16-bit ceiling
+    s = [make_stack(d, "1:250", bit_depth=16, name="a")]
+    obs = run_analysis(s, AnalysisSettings())
+    assert obs.params["histogram_max_value"] == 1429 and obs.params["histogram_bin_width"] == 6
+    nom = run_analysis(s, AnalysisSettings(histogram=HistogramSettings(range_max="nominal")))
+    assert nom.params["histogram_bin_width"] == 256
+    with pytest.raises(ValueError, match="below the observed maximum"):
+        run_analysis(s, AnalysisSettings(histogram=HistogramSettings(range_max=1000)))
+    h = obs.tables["intensity_histogram"]
+    assert h.groupby("source")["count"].sum().eq(d.size).any()

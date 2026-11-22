@@ -129,7 +129,7 @@ from the channel's `Resolution` metadata.
 
   | Flag | Rule (defaults in config) | Meaning |
   |---|---|---|
-  | `LARGE_REGION` | proxy > 85% of tissue voxels | the shared threshold lies above much of this stain's real signal |
+  | `LARGE_REGION` | proxy > 97% of tissue voxels | foreground has nearly vanished; the shared threshold lies above most of this stain's signal. (Originally 85%, which flagged every real stack: at 20× GFAP fills only ~2–4% of voxels, so ~90% background is normal.) |
   | `SMALL_REGION` | proxy < 5% of tissue voxels | estimate rests on few, possibly atypical voxels |
   | `EMPTY_REGION` | no proxy voxels | background and SBR undefined |
   | `RIGHT_TAIL` | `bg_tail_asymmetry = (p95 − median)/(median − p05)` > 2 | upper tail typical of faint processes; noise-like background is ≈ 1 |
@@ -158,8 +158,13 @@ from the channel's `Resolution` metadata.
 
 ## 4. Histograms
 
-- **Bins:** `width = ceil((sat + 1) / n_bins)`, with integer edges `0, width, 2·width, …`
-  until `sat` is covered. Every bin spans the same number of integer levels; the last may
+- **Bin range:** `[0, M]`, shared by all concentrations. By default `M` is the largest raw
+  value observed across all raw stacks (`range_max: observed`). Photon-count data can occupy
+  a tiny part of the nominal 16-bit range: in the real file the maximum is about 1430 of
+  65535, so nominal bins would be 256 counts wide. `nominal` (`M = 2^bits − 1`) or a fixed
+  count can be chosen instead. The basis is recorded as `histogram_range_basis`.
+- **Bins:** `width = ceil((M + 1) / n_bins)`, with integer edges `0, width, 2·width, …`
+  until `M` is covered. Every bin spans the same number of integer levels; the last may
   hold fewer, recorded in `n_levels_in_bin`. The same edges are used for all
   concentrations.
 - **Counting:** `np.bincount` on exact integer values. Totals are asserted to equal the

@@ -42,7 +42,9 @@ class BackgroundSettings:
     exclusion_radius_px: int = 5
     # --- QC limits for the background proxy (warnings only; nothing is auto-corrected) ---
     #: warn if the proxy covers more than this fraction of tissue voxels
-    qc_max_fraction_of_tissue: float = 0.85
+    #: (0.85 flagged every real stack: at 20x GFAP fills only ~2-4% of voxels, so ~90% background
+    #: is normal for this sparse marker; the flag now targets a nearly vanished foreground)
+    qc_max_fraction_of_tissue: float = 0.97
     #: warn if (p95 - median) / (median - p05) of proxy voxels exceeds this (right tail = faint signal)
     qc_max_tail_asymmetry: float = 2.0
     #: warn if the proxy median changes by more than this fraction between the sensitivity
@@ -67,6 +69,10 @@ class DepthSettings:
 class HistogramSettings:
     n_bins: int = 256
     zoom_max: float | None = None  # null -> 1.2 x largest per-image p99.8 of the MIPs
+    #: upper end of the shared bin range: "observed" (largest raw value over all raw stacks),
+    #: "nominal" (2**bits - 1), or a number of counts. Photon-count data can occupy a tiny
+    #: part of the nominal 16-bit range, where nominal bins would be hundreds of counts wide.
+    range_max: str | float = "observed"
 
 
 @dataclass
@@ -181,6 +187,9 @@ def validate_config(cfg: ProjectConfig) -> None:
     thr = a.foreground.threshold
     if isinstance(thr, str) and thr != "pooled_otsu":
         raise ValueError(f"analysis.foreground.threshold: invalid {thr!r}")
+    rm = a.histogram.range_max
+    if isinstance(rm, str) and rm not in ("observed", "nominal"):
+        raise ValueError(f"analysis.histogram.range_max: invalid {rm!r}")
     if not 0 < a.display_percentile <= 100:
         raise ValueError("analysis.display_percentile must be in (0, 100]")
     names = [s.name for s in cfg.series]

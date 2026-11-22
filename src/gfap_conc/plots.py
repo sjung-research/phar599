@@ -321,7 +321,8 @@ def histograms(result: AnalysisResult, path: Path, source: str, zoom_max: float 
         ax.set_xlabel("Raw intensity (counts)")
         ax.set_ylabel(f"Fraction of {word} per intensity level (log)")
     w = result.params["histogram_bin_width"]
-    axes[0].set_title(f"Full range 0–{result.params['histogram_max_value']} (bin width {w})", loc="left")
+    axes[0].set_title(f"0–{result.params['histogram_max_value']} ({result.params.get('histogram_range_basis', '')}; "
+                      f"bin width {w})", loc="left", fontsize=8.5)
     axes[1].set_title(f"Zoom 0–{zoom_max:.0f} (same bins)", loc="left")
     axes[1].legend(title="Primary dilution", loc="upper left", bbox_to_anchor=(1.02, 1))
     label = {"mip_all_pixels": "max-projection pixels", "stack_all_voxels": "all voxels of the z-stack",

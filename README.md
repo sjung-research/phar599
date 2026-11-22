@@ -19,7 +19,7 @@ morphological detail. The pipeline implements Rose's four requested analyses on 
 `_lng` (deconvolved, full-16-bit-normalised) series are **excluded from every intensity
 table** by a code-level guard; they are reserved for morphology QA (not yet implemented).
 
-> **Status:** core pipeline, review gate and 89 synthetic/unit tests are in place.
+> **Status:** core pipeline, review gate and 90 synthetic/unit tests are in place.
 > **No real microscopy data has been analysed yet.** See [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md)
 > for exactly what still needs validation on the actual `.lif`.
 

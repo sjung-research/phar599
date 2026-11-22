@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 89 tests)
+## Verified now (synthetic data, `uv run pytest`, 90 tests)
 
 | Component | What the tests establish |
 |---|---|
@@ -91,6 +91,19 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
   second surface, while the others include dim surface slices. `middle_over_last` is not
   strictly comparable across stacks; `middle_over_first` is the better retention measure
   (all stacks start at the upper surface, first slice at 67–89% of peak).
+
+### First confirmed run (2026-11-22): what it changed in the pipeline
+
+- Histograms used nominal 16-bit bins (256 counts wide) although all data are ≤ 1429
+  counts, so the survival curves had only ~6 points. Bins now span the observed range by
+  default (width 6 counts here).
+- `LARGE_REGION` (> 85%) flagged all four stacks. GFAP fills only 2.3–4.4% of voxels at
+  the shared threshold, so ~90% background is expected for this sparse marker. The limit is
+  now 97%. No result value is affected. `RIGHT_TAIL` (tail ratio ≈ 5 in all stacks)
+  remains, and is real: the proxy contains faint processes and out-of-focus light.
+- `p99_8` lies within 5% of the near-identical maxima (~1355 vs ~1420) in every stack, so it
+  sits in the range where any soft detector compression would act. p99.8-based depth
+  ratios may understate the mid-depth dip; mean-based ratios are less exposed.
 
 ## Requires the real `.lif` before results can be trusted
 

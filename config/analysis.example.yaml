@@ -49,7 +49,7 @@ analysis:
 
   background:
     exclusion_radius_px: 5        # XY distance kept away from foreground for the background proxy
-    qc_max_fraction_of_tissue: 0.85    # warn: proxy covers most of the tissue
+    qc_max_fraction_of_tissue: 0.97    # warn: proxy covers almost all tissue (foreground nearly vanished)
     qc_max_tail_asymmetry: 2.0         # warn: (p95-median)/(median-p05) of proxy voxels (faint GFAP tail)
     qc_max_threshold_dependence: 0.10  # warn: proxy median changes >10% between 0.75x and 1.25x threshold
     manual_rois: {}               # {"<series name>": [[y0, y1, x0, x1], ...]}  half-open, original pixels
@@ -65,6 +65,7 @@ analysis:
   histogram:
     n_bins: 256                   # integer-aligned; actual width recorded in run_manifest.json
     zoom_max: null                # null -> 1.2 x largest per-image MIP p99.8
+    range_max: observed           # observed | nominal | <counts>; shared bin range for all concentrations
 
 # Filled in AFTER `gfap-conc review`. The hash ties the confirmation to the exact input file,
 # channel, series and tissue-mask / z-range settings; changing any of them voids it.
