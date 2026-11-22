@@ -58,7 +58,7 @@ class DepthSettings:
     #: for z_range: manual -> {series name: [first, last]} inclusive slice indices, chosen during review
     manual_z_ranges: dict[str, list[int]] = field(default_factory=dict)
     auto_metric: str = "p99_8"
-    auto_rel_level: float = 0.5
+    auto_rel_level: float = 0.2
     window_fraction: float = 0.2
     retention_metrics: list[str] = field(default_factory=lambda: ["mean", "median", "p99_8"])
 

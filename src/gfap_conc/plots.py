@@ -416,8 +416,11 @@ def review_z_ranges(stacks: list[GFAPStack], tissue: dict[str, np.ndarray], conf
                              gridspec_kw={"width_ratios": [1.3, 1]})
     for row, (s, img) in enumerate(zip(stacks, xz, strict=True)):
         ax_img, ax_p = axes[row]
-        aspect = (s.z_step_um / s.pixel_size_um[1]) if (s.z_step_um and s.pixel_size_um) else "auto"
-        ax_img.imshow(img, cmap="magma", vmin=0, vmax=vmax, aspect=aspect, interpolation="nearest")
+        # true aspect would make a ~20-slice stack a hairline next to 2000+ px of X:
+        # stretch z so the panel is ~1/3 as tall as wide, and say so in the title
+        phys = (s.z_step_um / s.pixel_size_um[1]) if (s.z_step_um and s.pixel_size_um) else 1.0
+        stretch = max(1.0, (img.shape[1] / 3.0) / (img.shape[0] * phys))
+        ax_img.imshow(img, cmap="magma", vmin=0, vmax=vmax, aspect=phys * stretch, interpolation="nearest")
         z0, z1 = configured[s.series_name]
         a0, a1 = auto[s.series_name]
         for z in (z0 - 0.5, z1 + 0.5):
@@ -426,7 +429,8 @@ def review_z_ranges(stacks: list[GFAPStack], tissue: dict[str, np.ndarray], conf
             ax_img.axhline(z, color="white", lw=0.9, ls=":")
         ax_img.set_ylabel("z index (0 = first acquired)")
         ax_img.set_xticks([]), ax_img.grid(False)
-        ax_img.set_title(f"{s.concentration}: XZ max projection (max over Y), {s.series_name}", loc="left", fontsize=8.5)
+        ax_img.set_title(f"{s.concentration}: XZ max projection (max over Y), {s.series_name}; "
+                         f"z stretched x{stretch:.1f}", loc="left", fontsize=8.5)
 
         tm = tissue[s.series_name]
         sl = [p[tm] if not tm.all() else p.ravel() for p in s.data]

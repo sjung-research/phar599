@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 88 tests)
+## Verified now (synthetic data, `uv run pytest`, 89 tests)
 
 | Component | What the tests establish |
 |---|---|
@@ -57,6 +57,27 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
   Soft compression of the brightest signal by photon-counting dead time cannot be excluded
   from these numbers. The upper tails of the survival curves will be checked, and the
   question raised with Rose.
+
+### First review (2026-11-22, tissue mask `none`, z-range `full`)
+
+- All four fields lie entirely inside tissue (no empty space, medium or section edge), so
+  tissue mask `none` is appropriate. All fields share a layout: a dense bright band at the
+  top and sparser processes below. Whether they are the same anatomical region must be
+  confirmed with Rose.
+- Per-slice p99.8 is high at **both** ends of every stack, with a dip in the middle (the
+  pattern expected from penetration from both faces of a free-floating section).
+  - First slices are at 67–89% of the peak, so the stacks start at or inside the tissue
+    surface.
+  - Last slices are at 32–73% of the peak with visible structure: approaching the lower
+    surface, not outside it.
+  - `full` is a defensible z-range.
+- **The original `auto` rule failed on real data.** With `min + 0.5·(max − min)`, it
+  proposed keeping only slices 0–6 (1:250) and 0–7 (1:2000), cutting at the mid-stack dip.
+  It was not used. Fixed: the level is now measured from the background floor (lowest
+  per-slice median), default 0.2, and only end slices can be trimmed. It remains
+  unvalidated.
+- The XZ review view is now stretched in z (factor printed) so that thin stacks are
+  readable.
 
 ## Requires the real `.lif` before results can be trusted
 

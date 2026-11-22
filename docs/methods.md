@@ -85,8 +85,10 @@ from the channel's `Resolution` metadata.
   symmetric.
 - **Analysed z-range:** `full` by default; `manual` (chosen in review) is the intended
   choice if trimming is needed. `auto` keeps slices between the first and last crossing of
-  `min + 0.5·(max − min)` of the per-slice `p99_8`. It is meant to trim slices outside the
-  tissue and is **unvalidated**.
+  `floor + 0.2·(max − floor)` of the per-slice `p99_8`, where `floor` is the lowest
+  per-slice median (background). Only end slices can be trimmed; an internal dip is always
+  kept. It is meant to trim slices outside the tissue and is **unvalidated**. An earlier
+  version (`min + 0.5·(max − min)`) cut the real stacks at their mid-depth dip.
 - Nominal z is not corrected for refractive-index mismatch.
 - **Pitfall: ratios on raw values include the background floor.** An additive background
   that does not attenuate with depth pulls `middle_over_*` toward 1, so a **dimmer stain can

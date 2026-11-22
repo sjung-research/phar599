@@ -57,17 +57,28 @@ def slice_profile(
     return pd.DataFrame(rows)
 
 
-def detect_signal_z_extent(values: np.ndarray, rel_level: float = 0.5) -> tuple[int, int]:
-    """First and last slice whose value reaches ``min + rel_level * (max - min)``.
+def detect_signal_z_extent(
+    values: np.ndarray, rel_level: float = 0.2, floor: float | None = None
+) -> tuple[int, int]:
+    """First and last slice whose value reaches ``floor + rel_level * (max - floor)``.
 
-    A simple level-crossing rule for trimming slices acquired outside the tissue
-    (e.g. in mounting medium). Returned indices are inclusive. **Unvalidated on real
-    data** - inspect the depth profile before enabling it.
+    Meant to trim slices acquired outside the tissue (e.g. in mounting medium). Only
+    the ends can be trimmed: every slice between the first and last crossing is kept,
+    so a mid-stack intensity dip is never removed. ``floor`` should be a background
+    level (the pipeline passes the lowest per-slice median); if omitted, the profile
+    minimum is used, which is only appropriate for profiles without a deep internal dip.
+    Returned indices are inclusive. **Unvalidated on real data** - review the depth
+    profile before enabling it.
+
+    History: with ``floor = min(profile)`` and ``rel_level = 0.5``, the rule cut the real
+    stacks in the middle (their two bright surfaces and mid-stack dip put the half level
+    above the second peak); hence the background floor and the lower default level.
     """
     v = np.asarray(values, dtype=np.float64)
     if v.ndim != 1 or v.size == 0:
         raise ValueError("expected a non-empty 1-D profile")
-    lo, hi = np.nanmin(v), np.nanmax(v)
+    hi = np.nanmax(v)
+    lo = np.nanmin(v) if floor is None else float(floor)
     if not hi > lo:
         return 0, v.size - 1
     idx = np.flatnonzero(v >= lo + rel_level * (hi - lo))

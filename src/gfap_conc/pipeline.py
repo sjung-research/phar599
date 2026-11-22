@@ -110,7 +110,8 @@ def compute_tissue_masks(
 def auto_z_range(stack: GFAPStack, tissue_mask: np.ndarray, settings: AnalysisSettings) -> tuple[int, int]:
     prof = slice_profile(stack, _effective_mask(tissue_mask))
     d = settings.depth
-    return detect_signal_z_extent(prof[d.auto_metric].to_numpy(), d.auto_rel_level)
+    floor = float(prof["median"].min())  # background level: lowest per-slice median
+    return detect_signal_z_extent(prof[d.auto_metric].to_numpy(), d.auto_rel_level, floor)
 
 
 def resolve_z_ranges(

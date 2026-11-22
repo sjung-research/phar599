@@ -72,3 +72,12 @@ def test_detect_signal_z_extent():
     v = np.array([1, 2, 50, 100, 90, 60, 3, 1], float)
     assert detect_signal_z_extent(v, 0.5) == (3, 5)
     assert detect_signal_z_extent(np.ones(4)) == (0, 3)
+
+
+def test_detect_signal_z_extent_keeps_internal_dip_with_background_floor():
+    # bright at both surfaces, deep dip in the middle (real-data shape), two empty slices at each end
+    v = np.array([20, 25, 1180, 1320, 1290, 1000, 850, 840, 900, 1060, 970, 30, 22], float)
+    assert detect_signal_z_extent(v, 0.2, floor=20) == (2, 10)  # ends trimmed, dip kept
+    assert detect_signal_z_extent(v[2:11], 0.2, floor=20) == (0, 8)  # nothing to trim
+    # the old rule (min floor, half level) cut the real stacks in the middle
+    assert detect_signal_z_extent(v[2:11], 0.5)[1] < 8

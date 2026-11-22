@@ -58,7 +58,7 @@ analysis:
     z_range: full                 # full | auto (level-crossing trim; unvalidated) | manual (chosen in review)
     manual_z_ranges: {}           # for manual: {"<series name>": [first, last]}  inclusive slice indices
     auto_metric: p99_8
-    auto_rel_level: 0.5
+    auto_rel_level: 0.2          # fraction of the way from background floor to peak; ends only
     window_fraction: 0.2          # first / middle / last windows = 20% of analysed slices each
     retention_metrics: [mean, median, p99_8]
 
