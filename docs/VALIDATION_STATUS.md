@@ -79,6 +79,19 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 - The XZ review view is now stretched in z (factor printed) so that thin stacks are
   readable.
 
+### Second review (2026-11-22, stretched XZ view, revised `auto` rule): z-range `full` confirmed
+
+- No empty slices in any stack. End slices are darker in 1:500 (z22–23) and 1:1000 (z22),
+  but their p99.8 is still ≥ ~400 counts against a background median of about 20, so they
+  are tissue surfaces (partial volume), not medium. The revised `auto` rule independently
+  keeps every slice (0–20, 0–23, 0–22, 0–22).
+- **Comparability caveat:** the 1:250 stack spans 20.0 µm (stage Begin/End) against
+  22.0–22.3 µm for the others. Its last slice is still at 73% of peak, so it probably
+  stopped just short of the lower surface. Its last 20% window therefore holds the bright
+  second surface, while the others include dim surface slices. `middle_over_last` is not
+  strictly comparable across stacks; `middle_over_first` is the better retention measure
+  (all stacks start at the upper surface, first slice at 67–89% of peak).
+
 ## Requires the real `.lif` before results can be trusted
 
 Ordered roughly by when they will come up.
