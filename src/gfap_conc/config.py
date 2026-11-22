@@ -150,7 +150,7 @@ def _build(cls: type, data: Any, where: str) -> Any:
 
 def load_config(path: str | Path) -> ProjectConfig:
     path = Path(path)
-    with path.open(encoding="utf-8") as fh:
+    with path.open(encoding="utf-8-sig") as fh:
         raw = yaml.safe_load(fh) or {}
     cfg: ProjectConfig = _build(ProjectConfig, raw, path.name)
     validate_config(cfg)

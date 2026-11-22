@@ -171,7 +171,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     out = _run_dir(_real_base(cfg, cfg_path), args.out, "run" if confirmed else "preliminary_run")
     if _is_synthetic_path(out):
         raise SystemExit(f"refusing to write real-data results into a 'synthetic' path: {out}")
-    (out / "config_used.yaml").write_text(cfg_path.read_text(encoding="utf-8"), encoding="utf-8")
+    (out / "config_used.yaml").write_bytes(cfg_path.read_bytes())  # exact byte copy
     _finish(out, result, cfg, provenance, synthetic=False, review=review)
     return 0
 

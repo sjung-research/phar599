@@ -24,7 +24,7 @@ PACKAGES = ("gfap-conc", "numpy", "scipy", "pandas", "matplotlib", "scikit-image
 
 def _git(*args: str) -> str | None:
     try:
-        return subprocess.run(["git", *args], capture_output=True, text=True, check=True,
+        return subprocess.run(["git", *args], capture_output=True, text=True, check=True, encoding="utf-8", errors="replace",
                               cwd=Path(__file__).resolve().parent).stdout.strip()
     except Exception:
         return None

@@ -147,9 +147,9 @@ def test_demo_output_separated_and_marked(tmp_path):
         main(["demo", "--out", str(tmp_path / "demo_out")])
     out = tmp_path / "synthetic" / "demo"
     assert main(["demo", "--out", str(out)]) == 0
-    man = json.loads((out / "run_manifest.json").read_text())
+    man = json.loads((out / "run_manifest.json").read_text(encoding="utf-8"))
     assert man["synthetic_data"] is True and man["data_origin"] == "synthetic"
-    assert "SYNTHETIC DATA" in (out / "summary.md").read_text()
+    assert "SYNTHETIC DATA" in (out / "summary.md").read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------------------- plot helpers

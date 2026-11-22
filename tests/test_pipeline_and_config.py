@@ -101,7 +101,7 @@ def test_comparability_warning_for_unequal_z_step():
 
 def test_config_rejects_unknown_keys(tmp_path):
     p = tmp_path / "c.yaml"
-    p.write_text(yaml.safe_dump({"analysis": {"background": {"exclusion_radius": 3}}}))
+    p.write_text(yaml.safe_dump({"analysis": {"background": {"exclusion_radius": 3}}}), encoding="utf-8")
     with pytest.raises(ValueError, match="unknown key"):
         load_config(p)
 
@@ -113,7 +113,7 @@ def test_config_roundtrip(tmp_path):
         "series": [{"name": "A", "concentration": "1:250"},
                    {"name": "A_lng", "concentration": "1:250", "kind": "deconvolved", "pair_of": "A"}],
         "analysis": {"foreground": {"threshold": 300}},
-    }))
+    }), encoding="utf-8")
     cfg = load_config(p)
     assert cfg.series[1].kind is ImageKind.DECONVOLVED
     assert cfg.analysis.foreground.threshold == 300
@@ -132,13 +132,13 @@ def test_cli_inspect_review_run_on_test_lif(tmp_path, rng):
     assert main(["inspect", str(lif), "--out", str(tmp_path / "inspect")]) == 0
     inv = pd.read_csv(tmp_path / "inspect" / "series_inventory.csv")
     assert len(inv) == 16
-    suggestion = yaml.safe_load((tmp_path / "inspect" / "config_suggestion.yaml").read_text())
+    suggestion = yaml.safe_load((tmp_path / "inspect" / "config_suggestion.yaml").read_text(encoding="utf-8"))
     assert suggestion["input"]["gfap_channel"] is None  # never guessed
 
     cfg = {"input": {"lif_path": str(lif), "lif_sha256": suggestion["input"]["lif_sha256"], "gfap_channel": 0},
            "series": suggestion["series"], "output_dir": str(tmp_path / "results")}
     cfg_path = tmp_path / "cfg.yaml"
-    cfg_path.write_text(yaml.safe_dump(cfg))
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
     # 1. no review -> comparison refused
     with pytest.raises(SystemExit, match="must be reviewed"):
@@ -147,10 +147,10 @@ def test_cli_inspect_review_run_on_test_lif(tmp_path, rng):
     # 2. explicit preliminary run is allowed but marked everywhere
     assert main(["run", "--config", str(cfg_path), "--out", str(tmp_path / "prelim"), "--allow-unreviewed"]) == 0
     prelim = tmp_path / "prelim"
-    assert "PRELIMINARY" in (prelim / "summary.md").read_text()
-    man = json.loads((prelim / "run_manifest.json").read_text())
+    assert "PRELIMINARY" in (prelim / "summary.md").read_text(encoding="utf-8")
+    man = json.loads((prelim / "run_manifest.json").read_text(encoding="utf-8"))
     assert man["review_status"]["status"].startswith("PRELIMINARY") and man["data_origin"] == "lif"
-    assert (prelim / "qc_warnings.txt").read_text().startswith("PRELIMINARY")
+    assert (prelim / "qc_warnings.txt").read_text(encoding="utf-8").startswith("PRELIMINARY")
 
     # 3. review -> record confirmation with hash -> confirmed run
     assert main(["review", "--config", str(cfg_path), "--out", str(tmp_path / "review")]) == 0
@@ -159,18 +159,18 @@ def test_cli_inspect_review_run_on_test_lif(tmp_path, rng):
               "figures/review_z_range.png"):
         assert (rv / f).exists(), f
     assert not (rv / "max_projection_summary.csv").exists()  # review produces no comparison numbers
-    h = json.loads((rv / "review_provenance.json").read_text())["review_settings_sha256"]
-    assert h in (rv / "review_checklist.md").read_text()
+    h = json.loads((rv / "review_provenance.json").read_text(encoding="utf-8"))["review_settings_sha256"]
+    assert h in (rv / "review_checklist.md").read_text(encoding="utf-8")
     cfg["review"] = {"tissue_mask_confirmed": True, "z_range_confirmed": True, "reviewed_settings_sha256": h}
-    cfg_path.write_text(yaml.safe_dump(cfg))
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     assert main(["run", "--config", str(cfg_path), "--out", str(tmp_path / "run")]) == 0
     out = tmp_path / "run"
     for f in ("max_projection_summary.csv", "depth_profile.csv", "background_summary.csv",
               "threshold_sensitivity.csv", "intensity_histogram.csv", "summary.md", "run_manifest.json",
               "config_used.yaml", "figures/threshold_sensitivity.png"):
         assert (out / f).exists(), f
-    assert "PRELIMINARY" not in (out / "summary.md").read_text()
-    assert json.loads((out / "run_manifest.json").read_text())["review_status"]["status"] == "confirmed"
+    assert "PRELIMINARY" not in (out / "summary.md").read_text(encoding="utf-8")
+    assert json.loads((out / "run_manifest.json").read_text(encoding="utf-8"))["review_status"]["status"] == "confirmed"
     mp = pd.read_csv(out / "max_projection_summary.csv")
     assert set(mp["image_kind"]) == {"raw"} and len(set(mp["concentration"])) == 4
     assert set(mp["data_origin"]) == {"lif"}
@@ -178,20 +178,20 @@ def test_cli_inspect_review_run_on_test_lif(tmp_path, rng):
     # 4. changing a reviewed setting invalidates the confirmation
     cfg["analysis"] = {"depth": {"z_range": "manual", "manual_z_ranges": {
         s["name"]: [1, 7] for s in cfg["series"] if s["kind"] == "raw"}}}
-    cfg_path.write_text(yaml.safe_dump(cfg))
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     with pytest.raises(SystemExit, match="changed since the review"):
         main(["run", "--config", str(cfg_path), "--out", str(tmp_path / "run_changed")])
 
     # 5. real results may not be written into a 'synthetic' path
     cfg.pop("analysis")
-    cfg_path.write_text(yaml.safe_dump(cfg))
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     with pytest.raises(SystemExit, match="synthetic"):
         main(["run", "--config", str(cfg_path), "--out", str(tmp_path / "synthetic_mix")])
 
     assert lif.read_bytes() == before  # source file untouched throughout
 
     cfg["input"]["lif_sha256"] = "0" * 64
-    cfg_path.write_text(yaml.safe_dump(cfg))
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         main(["run", "--config", str(cfg_path), "--out", str(tmp_path / "run2")])
 
