@@ -56,18 +56,22 @@ def _finish(out: Path, result: AnalysisResult, cfg: ProjectConfig, provenance: d
 
 # ------------------------------------------------------------------ inspect
 def cmd_inspect(args: argparse.Namespace) -> int:
-    from .io_lif import comparability_table, inventory, sha256_file, xml_header
+    from .io_lif import comparability_table, companion_files, file_record, inventory, sha256_file, xml_header
 
     lif = Path(args.lif)
-    out = _run_dir("results/inspect", args.out, f"inspect_{lif.stem}")
+    if not lif.exists():
+        raise SystemExit(f"file not found: {lif}")
+    out = _run_dir("results/inspect", args.out, f"inspect_{lif.stem}_{lif.suffix.lstrip('.')}")
     digest = sha256_file(lif)
+    companions = companion_files(lif)
     inv, settings = inventory(lif, pixel_stats=not args.no_pixel_stats)
     inv.to_csv(out / "series_inventory.csv", index=False)
     settings.to_csv(out / "acquisition_settings_long.csv", index=False)
     raw_paths = inv.loc[inv["image_kind_guess"] == "raw", "series_path"].drop_duplicates().tolist()
     comparability_table(settings, raw_paths).to_csv(out / "acquisition_comparability_raw.csv", index=False)
     (out / "lif_xml_header.xml").write_text(xml_header(lif), encoding="utf-8")
-    prov = {"lif_path": str(lif.resolve()), "lif_sha256": digest, "lif_size_bytes": lif.stat().st_size}
+    prov = {"lif_path": str(lif.resolve()), "lif_sha256": digest, "lif_size_bytes": lif.stat().st_size,
+            "companion_files": [file_record(c) for c in companions]}
     (out / "input_provenance.json").write_text(json.dumps(prov, indent=2), encoding="utf-8")
 
     series = []
@@ -88,6 +92,14 @@ def cmd_inspect(args: argparse.Namespace) -> int:
                         "dims", "shape", "bit_depth", "z_step_um", "raw_max", "saturation_fraction") if c in inv]
     print(inv[cols].to_string(index=False))
     print(f"\nInventory written to {out}")
+    if "container_file" in inv:
+        print("Images per container file: " + ", ".join(
+            f"{k}: {v}" for k, v in inv.drop_duplicates("series_path")["container_file"].value_counts().items()))
+    for c in companions:
+        if c.name not in set(inv.get("container_file", [])):
+            print(f"\nNOTE: companion file {c.name} exists, but no images were read from it via {lif.name}.\n"
+                  f"      It may hold further series (e.g. processed/_lng images). Inspect it separately:\n"
+                  f"      uv run gfap-conc inspect \"{c}\"")
     return 0
 
 
@@ -180,6 +192,11 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # e.g. Windows cp949 consoles: never crash on 'µ' or '…'
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(prog="gfap-conc", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)

@@ -90,3 +90,15 @@ def test_guess_concentration(name, expected):
 def test_guess_kind_uses_exact_token():
     assert guess_kind("A_lng") is ImageKind.DECONVOLVED
     assert guess_kind("A_LNG") is ImageKind.RAW  # not normalised; inventory flags it for review
+
+
+def test_companion_lifext_detected_and_container_recorded(lif_path):
+    p, _ = lif_path
+    assert io_lif.companion_files(p) == []
+    ext = p.with_suffix(".lifext")
+    ext.write_bytes(b"placeholder")
+    assert io_lif.companion_files(p) == [ext]
+    assert io_lif.file_record(ext)["size_bytes"] == len(b"placeholder")
+    inv, _ = io_lif.inventory(p, pixel_stats=False)
+    assert set(inv["container_file"]) == {p.name}
+    assert set(inv["container_type"]) == {"LIF"}

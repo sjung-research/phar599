@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from .config import ProjectConfig
-from .io_lif import list_series, load_stack, read_channel, sha256_file
+from .io_lif import companion_files, file_record, list_series, load_stack, read_channel, sha256_file
 from .model import GFAPStack
 from .projection import max_projection
 
@@ -70,5 +70,6 @@ def load_configured_stacks(
             raise ValueError(f"{spec.name}: channel {ch.index} is named {ch.name!r}; this looks like DAPI, not GFAP")
         if ch.lut_name.lower() == "blue":
             warnings.append(f"{spec.name}: GFAP channel {ch.index} uses a blue LUT ({evidence}); confirm it is AF647")
-    provenance = {"lif_path": str(lif), "lif_sha256": digest, "lif_size_bytes": lif.stat().st_size}
+    provenance = {"lif_path": str(lif), "lif_sha256": digest, "lif_size_bytes": lif.stat().st_size,
+                  "companion_files": [file_record(c) for c in companion_files(lif)]}
     return stacks, refs, warnings, provenance

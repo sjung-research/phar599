@@ -53,6 +53,28 @@ def sha256_file(path: str | Path, chunk: int = 1 << 22) -> str:
     return h.hexdigest()
 
 
+#: companion files LAS X may write next to a .lif (e.g. extended image data)
+COMPANION_SUFFIXES = (".lifext",)
+
+
+def companion_files(path: str | Path) -> list[Path]:
+    """Existing companion files with the same stem (e.g. ``x.lifext`` next to ``x.lif``)."""
+    p = Path(path)
+    return [p.with_suffix(sfx) for sfx in COMPANION_SUFFIXES if p.suffix.lower() != sfx and p.with_suffix(sfx).exists()]
+
+
+def file_record(path: str | Path) -> dict:
+    p = Path(path)
+    return {"path": str(p.resolve()), "sha256": sha256_file(p), "size_bytes": p.stat().st_size}
+
+
+def _container(image) -> tuple[str, str]:
+    parent = getattr(image, "parent", None)
+    name = Path(getattr(parent, "filepath", "") or "").name
+    kind = getattr(getattr(parent, "type", None), "value", "")
+    return name, str(kind)
+
+
 def _require_liffile() -> None:
     if LifFile is None:  # pragma: no cover
         raise ImportError("liffile is not installed; run `uv sync`")
@@ -303,9 +325,12 @@ def inventory(path: str | Path, pixel_stats: bool = True) -> tuple[pd.DataFrame,
             arr = image.asarray() if pixel_stats else None
             z = meta.dimensions.get("Z")
             for ch in meta.channels:
+                container_file, container_type = _container(image)
                 row = {
                     "series_path": meta.path,
                     "series_name": meta.name,
+                    "container_file": container_file,
+                    "container_type": container_type,
                     "image_kind_guess": guess_kind(meta.path).value,
                     "concentration_guess": guess_concentration(meta.name),
                     "channel_index": ch.index,

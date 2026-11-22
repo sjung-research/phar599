@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 84 tests)
+## Verified now (synthetic data, `uv run pytest`, 85 tests)
 
 | Component | What the tests establish |
 |---|---|
