@@ -91,6 +91,13 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     cols = [c for c in ("series_path", "image_kind_guess", "concentration_guess", "channel_index", "channel_name",
                         "dims", "shape", "bit_depth", "z_step_um", "raw_max", "saturation_fraction") if c in inv]
     print(inv[cols].to_string(index=False))
+    ev = inv.drop_duplicates("series_path")
+    odd = ev.iloc[:0]
+    if "image_kind_evidence" in ev:
+        odd = ev[ev["image_kind_evidence"].fillna("").str.contains("spelling differs")]
+    if len(odd):
+        print("\nNOTE: deconvolved suffix spelled differently from Rose's '_lng' in: "
+              + ", ".join(odd["series_path"]) + " (guessed deconvolved; confirm in config)")
     print(f"\nInventory written to {out}")
     if "container_file" in inv:
         print("Images per container file: " + ", ".join(

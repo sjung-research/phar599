@@ -87,9 +87,23 @@ def test_guess_concentration(name, expected):
     assert guess_concentration(name) == expected
 
 
-def test_guess_kind_uses_exact_token():
+def test_guess_kind_case_insensitive_with_explicit_evidence():
     assert guess_kind("A_lng") is ImageKind.DECONVOLVED
-    assert guess_kind("A_LNG") is ImageKind.RAW  # not normalised; inventory flags it for review
+    assert guess_kind("1-250_Lng") is ImageKind.DECONVOLVED  # spelling found in the real file
+    assert guess_kind("1-250") is ImageKind.RAW
+    assert io_lif.kind_evidence("A_lng") == "name contains '_lng'"
+    assert "spelling differs" in io_lif.kind_evidence("1-250_Lng")
+    assert io_lif.kind_evidence("1-250") == ""
+
+
+def test_inventory_reports_pileup_at_max(tmp_path):
+    d = np.full((3, 2, 8, 8), 100, np.uint16)
+    d[:, 1, :2, :] = 1420  # clamp-like ceiling in channel 1
+    p = write_lif(tmp_path / "ceil.lif", [LifTestImage("1-250", d, resolution_bits=16)])
+    inv, _ = io_lif.inventory(p)
+    row = inv[inv.channel_index == 1].iloc[0]
+    assert row.raw_max == 1420 and row.saturation_fraction == 0
+    assert row.n_at_raw_max == 3 * 2 * 8 and row.frac_within_2pct_of_raw_max == pytest.approx(0.25)
 
 
 def test_companion_lifext_detected_and_container_recorded(lif_path):

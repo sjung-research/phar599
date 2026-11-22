@@ -345,6 +345,8 @@ def run_analysis(
                 "stack_frac_zero": st["frac_zero"],
                 "stack_frac_saturated": st["frac_saturated"],
                 "max_slice_frac_saturated": float(max(per_slice_sat)),
+                "n_at_observed_max": int(np.count_nonzero(s.data == st["max"])),
+                "frac_within_2pct_of_observed_max": float(np.count_nonzero(s.data >= 0.98 * st["max"])) / s.data.size,
                 "z_analysis_first": z0,
                 "z_analysis_last": z1,
                 "tissue_mask_method": a.tissue_mask.method,
@@ -356,6 +358,18 @@ def run_analysis(
             warnings.append(f"{s.series_name}: {st['frac_saturated']:.3%} of voxels are saturated")
         if st["frac_zero"] > 0.01:
             warnings.append(f"{s.series_name}: {st['frac_zero']:.2%} of voxels are exactly 0 (offset clipping?)")
+
+    maxes = {r["concentration"]: r["stack_max"] for r in qc_rows}
+    hi, lo = max(maxes.values()), min(maxes.values())
+    nominal = min(s.saturation_value for s in raw)
+    if len(maxes) >= 2 and hi > 0 and (hi - lo) / hi < 0.02 and hi < 0.5 * nominal:
+        warnings.append(
+            "Raw maxima are nearly identical across concentrations ("
+            + ", ".join(f"{c}={v:.0f}" for c, v in maxes.items())
+            + f") and far below the nominal ceiling ({nominal}). This can indicate an EFFECTIVE detector ceiling "
+            "(e.g. photon-counting limit) that clips the brightest structures, which saturation_fraction cannot "
+            "detect. Check the top histogram bins, n_at_observed_max and the detector mode before comparing brightness."
+        )
 
     tables = {
         "qc_stack_summary": pd.DataFrame(qc_rows),

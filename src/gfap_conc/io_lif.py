@@ -248,7 +248,21 @@ def guess_concentration(name: str) -> str | None:
 
 
 def guess_kind(name: str) -> ImageKind:
-    return ImageKind.DECONVOLVED if DECONVOLVED_TOKEN in name else ImageKind.RAW
+    """Proposed kind from the name. Rose wrote ``_lng``; LAS X may write ``_Lng``.
+    Matching ignores case, but the exact spelling is reported by :func:`kind_evidence`.
+    A guess only - the config is authoritative."""
+    return ImageKind.DECONVOLVED if DECONVOLVED_TOKEN in name.lower() else ImageKind.RAW
+
+
+def kind_evidence(name: str) -> str:
+    low = name.lower()
+    i = low.find(DECONVOLVED_TOKEN)
+    if i < 0:
+        return ""
+    actual = name[i:i + len(DECONVOLVED_TOKEN)]
+    if actual == DECONVOLVED_TOKEN:
+        return f"name contains '{actual}'"
+    return f"name contains '{actual}' (spelling differs from '{DECONVOLVED_TOKEN}'; confirm it is the deconvolved version)"
 
 
 # ----------------------------------------------------------------- pixel I/O
@@ -332,6 +346,7 @@ def inventory(path: str | Path, pixel_stats: bool = True) -> tuple[pd.DataFrame,
                     "container_file": container_file,
                     "container_type": container_type,
                     "image_kind_guess": guess_kind(meta.path).value,
+                    "image_kind_evidence": kind_evidence(meta.path),
                     "concentration_guess": guess_concentration(meta.name),
                     "channel_index": ch.index,
                     "channel_name": ch.name,
@@ -359,11 +374,15 @@ def inventory(path: str | Path, pixel_stats: bool = True) -> tuple[pd.DataFrame,
                         data = channel_zyx(arr, meta.dims, ch.index, meta.path)
                         sat = 2**ch.resolution_bits - 1
                         n = data.size
+                        vmax = int(data.max())
                         row.update(
-                            raw_min=int(data.min()), raw_max=int(data.max()), saturation_value=sat,
+                            raw_min=int(data.min()), raw_max=vmax, saturation_value=sat,
                             saturation_fraction=float(np.count_nonzero(data >= sat)) / n,
                             zero_fraction=float(np.count_nonzero(data == 0)) / n,
-                            values_exceed_bit_depth=bool(data.max() > sat),
+                            values_exceed_bit_depth=bool(vmax > sat),
+                            # pile-up just below an effective ceiling is invisible to saturation_fraction
+                            n_at_raw_max=int(np.count_nonzero(data == vmax)),
+                            frac_within_2pct_of_raw_max=float(np.count_nonzero(data >= 0.98 * vmax)) / n,
                         )
                     except ValueError as exc:
                         row["pixel_stats_error"] = str(exc)

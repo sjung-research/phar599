@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 
-## Verified now (synthetic data, `uv run pytest`, 85 tests)
+## Verified now (synthetic data, `uv run pytest`, 87 tests)
 
 | Component | What the tests establish |
 |---|---|
@@ -20,6 +20,25 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
 | Pipeline | Identity columns (concentration, series name, channel) on every row; brightness order and mid-depth dip of synthetic data recovered; duplicate concentrations refused instead of pooled |
 | LIF reader path | On small LIF files written to the documented v2 layout (`tests/lif_writer.py`): series listing, Z/C/Y/X axes, µm conversion, channel selection without mixing, bit depth, hardware-setting capture, comparability flags |
 | CLI | `inspect` → `run` end to end on a test LIF; source file byte-identical afterwards; checksum mismatch aborts |
+
+## Confirmed from the real file (`gfap-conc inspect`, 2026-11-22)
+
+`Sewon_GFAP_curve.lif` (plus a companion `Sewon_GFAP_curve.lifext`, not yet inspected):
+
+- 8 images: `1-250`, `1-500`, `1-1000`, `1-2000` and `1-250_Lng` … `1-2000_Lng`. The
+  suffix is written **`_Lng`** in the file (Rose wrote `_lng`). Name matching now ignores
+  case, and the exact spelling is reported in `image_kind_evidence`.
+- `_Lng` images differ in memory layout (CZYX vs ZCYX for raw) and reach 65535, with
+  0.3–0.6% of AF647 voxels at 65535. This is consistent with deconvolution plus full-range
+  rescaling.
+- Channels (dye names from metadata): 0 = `DAPI`, 1 = `ALEXA 647`.
+- Raw images: 2200 × 1500 px, z-step 1.0007 µm, 21/24/23/23 slices (about 20–23 µm, not
+  50 µm), `Resolution` 16 bit.
+- **Open issue:** raw AF647 maxima are 1429/1421/1419/1418, nearly identical across an
+  8-fold dilution range and far below 65535. Possible causes are an effective detector
+  ceiling (e.g. photon counting) or genuinely equal peak brightness. Saturation at 65535 is
+  0%, which is uninformative here. Check the detector mode in the acquisition settings,
+  `n_at_raw_max`, and the top histogram bins. The pipeline now warns about this pattern.
 
 ## Requires the real `.lif` before results can be trusted
 

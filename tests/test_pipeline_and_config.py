@@ -200,3 +200,15 @@ def test_example_config_is_valid():
     cfg = load_config(Path(__file__).resolve().parents[1] / "config" / "analysis.example.yaml")
     assert cfg.review.tissue_mask_confirmed is False
     assert cfg.input.gfap_channel is None
+
+
+def test_identical_maxima_far_below_ceiling_warned():
+    stacks = []
+    for i, c in enumerate(("1:250", "1:500", "1:1000")):
+        d = np.full((6, 16, 16), 50 + 10 * i, np.uint16)
+        d[:, :2, :] = 1420 - i  # common effective ceiling
+        stacks.append(make_stack(d, c, bit_depth=16, name=c))
+    res = run_analysis(stacks, AnalysisSettings())
+    assert any("EFFECTIVE detector ceiling" in w for w in res.warnings)
+    qc = res.tables["qc_stack_summary"]
+    assert (qc["n_at_observed_max"] == 6 * 2 * 16).all()
