@@ -26,7 +26,11 @@ project without the original chat. Read it fully before acting. Last updated 202
 2. `docs/context/03_Coding_Task_and_Analysis_Spec.md`: the original spec. Rose's emails are
    quoted verbatim in all three context files.
 3. `reports/GFAP_concentration_curve_report_2026-11-23.md`: the results as sent to Rose,
-   with figures in `reports/figures/`.
+   with figures in `reports/figures/`. **The complete raw output of the confirmed run**
+   (all CSVs, 12 figures, `summary.md`, `qc_warnings.txt`, `run_manifest.json`,
+   `config_used.yaml`) is in `reports/run_outputs/run_20261122-160023/`. Use it to check or
+   extend results instead of asking for re-runs. The files were written on Windows (CRLF;
+   `config_used.yaml` has a UTF-8 BOM).
 4. `docs/methods.md`: exact definitions of every number.
 5. `docs/VALIDATION_STATUS.md`: what is tested, and what was learned from the real data.
 6. `docs/SESSION_LOG.md`: the history, every problem fixed, and an authorship note.
@@ -98,7 +102,8 @@ project without the original chat. Read it fully before acting. Last updated 202
 
 ## 6. The exact config used for the confirmed run
 
-`config/analysis.yaml` is git-ignored. This is its content. The `analysis:` block was
+`config/analysis.yaml` is git-ignored. This is its content; an exact copy is
+`reports/run_outputs/run_20261122-160023/config_used.yaml`. The `analysis:` block was
 omitted, so all defaults apply. Defaults at the time of the run were as in
 `config/analysis.example.yaml`, except two later changes that do not affect the review hash:
 `histogram.range_max: observed` and `qc_max_fraction_of_tissue: 0.97`.
@@ -182,7 +187,7 @@ node reports/build_report_docx.js reports/<name>.md reports/<name>.docx
 
 There is also an online copy (Claude Docs): <https://claude.ai/artifact/EMni7yBiV8BouX5G2bJP55>.
 
-## 8. Results (confirmed run, photon counts)
+## 8. Results (confirmed run `run_20261122-160023`, code `e5552bf`, photon counts)
 
 | Dilution | MIP mean | MIP p99.8 | Stack median / q0.9 / q0.99 | Mid/first window (mean) | Background proxy | SBR @ T=341 | GFAP voxels ≥ T |
 |---|---|---|---|---|---|---|---|
@@ -195,8 +200,10 @@ There is also an online copy (Claude Docs): <https://claude.ai/artifact/EMni7yBi
 - There is no dose dependence. The antibody is likely in excess (plateau) at ≥ 1:2000.
 - 1:1000 differs in GFAP-positive *volume* (field content), not in brightness: its
   histogram has the same slope, shifted up.
-- The mid-depth dip (mean about 55–63% of the near-surface peak) is the same at every
-  dilution.
+- The mid-depth dip is the same at every dilution. The minimum of the per-slice mean over
+  the middle half of each stack is 57 / 55 / 63 / 57% of the near-surface peak. After
+  subtracting the per-slice `bg_proxy_median`, it is 43 / 39 / 49 / 41%. These were computed
+  ad hoc from `depth_profile.csv` and are not yet a pipeline output.
 - **Soft photon-counting saturation:** there is a bump at 1,300–1,340 counts and a cliff at
   about 1,420 in every stack. Maxima and p99.8 measure the ceiling, so comparisons use
   means, medians and the 100–1,200-count range.
@@ -210,7 +217,8 @@ There is also an online copy (Claude Docs): <https://claude.ai/artifact/EMni7yBi
 2. **Background-subtracted depth retention**, e.g. `(metric − bg_proxy_median)` ratios
    using the per-slice `bg_proxy_median` already in `depth_profile.csv`. Implement in
    `depth.py` and `pipeline.py` as additional columns, keeping the raw ones. The report's
-   "40–50%" figure is currently read by eye from a figure.
+   43 / 39 / 49 / 41% values were computed ad hoc (peak = max of the first half,
+   trough = min over the middle 50% of slices). Make this a tested pipeline output.
 3. **Linearity analysis for re-imaging:** if Rose images one field at two laser powers or
    accumulations, compare them pixel by pixel (ratio vs intensity) to locate the onset of
    compression. Needs a new small module and a CLI command.

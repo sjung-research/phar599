@@ -69,7 +69,7 @@ Every stack is brightest near both surfaces and dimmest at mid-depth, and the di
 | 1:1000 | 0.87 | 0.86 | 86.7 | 75.5 |
 | 1:2000 | 0.76 | 0.67 | 64.5 | 49.2 |
 
-Windows are 20% of each stack's slices (4-5 slices); z = 0 is the first acquired slice. Measured from the per-slice mean curve, the mid-depth minimum is about 55-63% of the near-surface peak (read from the figure, approximate). After subtracting the background proxy, specific signal at mid-depth is roughly 40-50% of the peak. The p99.8 ratios understate the dip because surface p99.8 values sit in the detector's compression band. Middle-to-last ratios are not reported: the 1:250 stack (20.0 µm against 22.0-22.3 µm) probably stops just short of the lower surface, so its last window is not comparable.
+Windows are 20% of each stack's slices (4-5 slices); z = 0 is the first acquired slice. From the per-slice mean (depth_profile.csv), the minimum over the middle half of each stack is 57%, 55%, 63% and 57% of its near-surface peak (1:250, 1:500, 1:1000, 1:2000). After subtracting each slice's background-proxy median, specific signal at that depth is 43%, 39%, 49% and 41% of the peak. The p99.8 ratios understate the dip because surface p99.8 values sit in the detector's compression band. Middle-to-last ratios are not reported: the 1:250 stack (20.0 µm against 22.0-22.3 µm) probably stops just short of the lower surface, so its last window is not comparable.
 
 ![Per-slice mean GFAP intensity versus depth for four dilutions](figures/fig2_depth_mean.png)
 
@@ -156,15 +156,15 @@ Questions:
 
 ## Provenance
 
-All numbers come from a confirmed (reviewed) run on the unmodified .lif. Histogram and survival figures come from a re-run on the same input after a bin-range fix. No other value changed between the two runs.
+All numbers and figures come from the confirmed (reviewed) run run_20261122-160023 on the unmodified .lif, whose complete output is stored in the repository under reports/run_outputs/. An earlier confirmed run (run_20261122-153413) gave identical values; only its histogram binning and one QC flag threshold differed.
 
 | Item | Value |
 | --- | --- |
 | Input .lif SHA-256 | da134597fa839257395a3f5595f4c0a634910837337f518725bc278fc27041be |
 | Companion .lifext SHA-256 | 534d60073c64663a78426e7efa98944217e695dc56be60deb896d9732db5e1a3 |
 | Review | tissue mask none, z-range full, confirmed by Sewon; settings hash 6fd16a9c650c08a97525ff47892088c32e02a03f9756c235af9e2fdc7bd9b3cb |
-| Main run | run_20261122-153413, config hash b25e7b4d1d3691adc49f4bc139ede49711a5aa6fd8ce9725c15d1ef823fa6a6c |
-| Code | gfap-conc, repository sjung-research/phar599, branch claude/blissful-cori-wjn019; exact commit and package versions in each run_manifest.json |
+| Main run | run_20261122-160023, code commit e5552bf, config hash 8504d28050a2c1dcf8fd6b0416e37d5c69f9c61a8a2be22c41840b4c7c921a51 |
+| Code | gfap-conc, repository sjung-research/phar599, branch claude/blissful-cori-wjn019; package versions in run_manifest.json |
 | Software | Python 3.13, liffile 2026.11.12, numpy, scipy, scikit-image, pandas, matplotlib |
 
-Full tables (CSV), every figure and the QC warnings are in the run folders on Sewon's laptop. Calculation definitions are in docs/methods.md of the repository.
+Full tables (CSV), every figure, the QC warnings and the run manifest are in reports/run_outputs/run_20261122-160023/ of the repository. Calculation definitions are in docs/methods.md.
