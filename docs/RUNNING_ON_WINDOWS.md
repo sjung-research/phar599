@@ -98,3 +98,47 @@ Results: `results\real\run_<timestamp>\` (CSVs, `figures\`, `summary.md`,
 git pull
 uv sync
 ```
+
+## A second computer (e.g. the lab desktop)
+
+The project folder is self-contained: uv installs its own Python into `.venv` and never
+touches conda. Rose's napari/conda environment is unaffected. Use a plain PowerShell
+window, not an "Anaconda Prompt".
+
+1. Install uv (per-user, no admin rights needed), then reopen PowerShell. Check `uv --version`.
+2. Install Git if `git --version` fails. Without admin rights, choose one of:
+   - **Git for Windows**, with the "install for current user" option;
+   - **GitHub Desktop**: per-user install, includes Git and a browser sign-in;
+   - a ZIP download of the branch from GitHub (**Code → Download ZIP** while viewing
+     `claude/blissful-cori-wjn019`). With a ZIP there is no `git pull`, and
+     `run_manifest.json` cannot record the code commit, so prefer Git.
+3. Clone, install and test:
+
+   ```powershell
+   cd $HOME\Documents
+   git clone -b claude/blissful-cori-wjn019 https://github.com/sjung-research/phar599.git
+   cd phar599
+   uv sync
+   uv run pytest
+   ```
+
+4. Recreate the git-ignored config from the committed copy of the confirmed run, and point
+   it at the `.lif` on this computer:
+
+   ```powershell
+   Copy-Item reports\run_outputs\run_20261122-160023\config_used.yaml config\analysis.yaml
+   (Get-Content config\analysis.yaml) -replace "lif_path: '.*'", "lif_path: 'D:\path\to\Sewon_GFAP_curve.lif'" | Set-Content config\analysis.yaml -Encoding UTF8
+   ```
+
+   The review confirmation stays valid. Its hash covers the file's SHA-256 and the
+   settings, not its path, so a byte-identical copy of the `.lif` can live anywhere.
+5. Run as usual:
+
+   ```powershell
+   uv run gfap-conc run --config config\analysis.yaml
+   ```
+
+**On a shared computer:** after cloning, remove the stored GitHub login if others use the
+account. Go to Windows **Credential Manager → Windows Credentials** and remove
+`git:https://github.com`; in GitHub Desktop, use File → Options → Sign out. The private repo
+can then still be updated with `git pull`, which will ask you to sign in again.
