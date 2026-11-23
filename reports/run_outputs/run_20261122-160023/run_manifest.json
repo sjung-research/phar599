@@ -1,0 +1,277 @@
+{
+  "created_utc": "2026-11-22T21:00:30+00:00",
+  "synthetic_data": false,
+  "data_origin": "lif",
+  "review_status": {
+    "status": "confirmed",
+    "reasons": [],
+    "settings_sha256": "6fd16a9c650c08a97525ff47892088c32e02a03f9756c235af9e2fdc7bd9b3cb",
+    "reviewed_by": "Sewon",
+    "notes": "Mask none: all four fields fully inside tissue. z-range full: no empty slices; darker end slices (1:500 z22-23, 1:1000 z22) are tissue surfaces. 1:250 stack spans 20.0 um vs 22.0-22.3 um and likely stops short of the lower surface, so middle_over_last is not strictly comparable; use middle_over_first. Four different sections (stage X 66.6/62.2/57.8/53.2 mm); region comparability to be confirmed with Rose."
+  },
+  "git_commit": "e5552bf9febf9eb82a12bb30a39c323141c2cffa",
+  "git_dirty": false,
+  "python": "3.13.1",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "packages": {
+    "gfap-conc": "0.1.0",
+    "numpy": "2.5.5",
+    "scipy": "1.18.1",
+    "pandas": "3.1.1",
+    "matplotlib": "3.11.2",
+    "scikit-image": "0.26.0",
+    "tifffile": "2026.11.16",
+    "liffile": "2026.11.12",
+    "pyyaml": "6.0.3"
+  },
+  "input": {
+    "lif_path": "E:\\2026NovemberGFAPlif\\Sewon_GFAP_curve.lif",
+    "lif_sha256": "da134597fa839257395a3f5595f4c0a634910837337f518725bc278fc27041be",
+    "lif_size_bytes": 2403467585,
+    "companion_files": [
+      {
+        "path": "E:\\2026NovemberGFAPlif\\Sewon_GFAP_curve.lifext",
+        "sha256": "534d60073c64663a78426e7efa98944217e695dc56be60deb896d9732db5e1a3",
+        "size_bytes": 384575069
+      }
+    ],
+    "config_path": "C:\\Users\\sjung3\\Documents\\phar599\\config\\analysis.yaml"
+  },
+  "config_sha256": "8504d28050a2c1dcf8fd6b0416e37d5c69f9c61a8a2be22c41840b4c7c921a51",
+  "config_resolved": {
+    "input": {
+      "lif_path": "E:\\2026NovemberGFAPlif\\Sewon_GFAP_curve.lif",
+      "lif_sha256": "da134597fa839257395a3f5595f4c0a634910837337f518725bc278fc27041be",
+      "gfap_channel": 1,
+      "reference_channel": 0,
+      "bit_depth_override": null,
+      "intensity_unit": "photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)"
+    },
+    "series": [
+      {
+        "name": "1-250",
+        "concentration": "1:250",
+        "kind": "raw",
+        "pair_of": null
+      },
+      {
+        "name": "1-500",
+        "concentration": "1:500",
+        "kind": "raw",
+        "pair_of": null
+      },
+      {
+        "name": "1-1000",
+        "concentration": "1:1000",
+        "kind": "raw",
+        "pair_of": null
+      },
+      {
+        "name": "1-2000",
+        "concentration": "1:2000",
+        "kind": "raw",
+        "pair_of": null
+      },
+      {
+        "name": "1-250_Lng",
+        "concentration": "1:250",
+        "kind": "deconvolved",
+        "pair_of": "1-250"
+      },
+      {
+        "name": "1-500_Lng",
+        "concentration": "1:500",
+        "kind": "deconvolved",
+        "pair_of": "1-500"
+      },
+      {
+        "name": "1-1000_Lng",
+        "concentration": "1:1000",
+        "kind": "deconvolved",
+        "pair_of": "1-1000"
+      },
+      {
+        "name": "1-2000_Lng",
+        "concentration": "1:2000",
+        "kind": "deconvolved",
+        "pair_of": "1-2000"
+      }
+    ],
+    "analysis": {
+      "display_percentile": 99.8,
+      "tissue_mask": {
+        "method": "none",
+        "reference": "gfap_mip",
+        "threshold": null,
+        "sigma_px": 2.0,
+        "min_object_px": 500
+      },
+      "foreground": {
+        "threshold": "pooled_otsu",
+        "sample_per_stack": 200000,
+        "seed": 0,
+        "sensitivity_factors": [
+          0.5,
+          0.75,
+          1.0,
+          1.25,
+          1.5,
+          2.0
+        ]
+      },
+      "background": {
+        "exclusion_radius_px": 5,
+        "qc_max_fraction_of_tissue": 0.97,
+        "qc_max_tail_asymmetry": 2.0,
+        "qc_max_threshold_dependence": 0.1,
+        "manual_rois": {}
+      },
+      "depth": {
+        "z_range": "full",
+        "manual_z_ranges": {},
+        "auto_metric": "p99_8",
+        "auto_rel_level": 0.2,
+        "window_fraction": 0.2,
+        "retention_metrics": [
+          "mean",
+          "median",
+          "p99_8"
+        ]
+      },
+      "histogram": {
+        "n_bins": 256,
+        "zoom_max": null,
+        "range_max": "observed"
+      }
+    },
+    "review": {
+      "tissue_mask_confirmed": true,
+      "z_range_confirmed": true,
+      "reviewed_settings_sha256": "6fd16a9c650c08a97525ff47892088c32e02a03f9756c235af9e2fdc7bd9b3cb",
+      "reviewed_by": "Sewon",
+      "notes": "Mask none: all four fields fully inside tissue. z-range full: no empty slices; darker end slices (1:500 z22-23, 1:1000 z22) are tissue surfaces. 1:250 stack spans 20.0 um vs 22.0-22.3 um and likely stops short of the lower surface, so middle_over_last is not strictly comparable; use middle_over_first. Four different sections (stage X 66.6/62.2/57.8/53.2 mm); region comparability to be confirmed with Rose."
+    },
+    "output_dir": "../results/real"
+  },
+  "analysis_params": {
+    "data_origin": "lif",
+    "foreground_threshold": 341.0,
+    "foreground_threshold_source": "pooled_otsu (equal pixel sample per raw stack, shared by all concentrations)",
+    "histogram_max_value": 1429,
+    "histogram_range_basis": "observed maximum over all raw stacks",
+    "histogram_bin_width": 6,
+    "z_ranges": {
+      "1-250": [
+        0,
+        20
+      ],
+      "1-500": [
+        0,
+        23
+      ],
+      "1-1000": [
+        0,
+        22
+      ],
+      "1-2000": [
+        0,
+        22
+      ]
+    },
+    "matched_depth_windows": {
+      "1-250": {
+        "first": [
+          0,
+          21
+        ],
+        "center": [
+          0,
+          21
+        ]
+      },
+      "1-500": {
+        "first": [
+          0,
+          20
+        ],
+        "center": [
+          2,
+          22
+        ]
+      },
+      "1-1000": {
+        "first": [
+          0,
+          21
+        ],
+        "center": [
+          1,
+          22
+        ]
+      },
+      "1-2000": {
+        "first": [
+          0,
+          21
+        ],
+        "center": [
+          1,
+          22
+        ]
+      }
+    }
+  },
+  "raw_series": [
+    {
+      "concentration": "1:250",
+      "dilution_factor": 250,
+      "series_name": "1-250",
+      "image_kind": "raw",
+      "channel_index": 1,
+      "bit_depth": 16,
+      "intensity_unit": "photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",
+      "source": "Sewon_GFAP_curve.lif::1-250"
+    },
+    {
+      "concentration": "1:500",
+      "dilution_factor": 500,
+      "series_name": "1-500",
+      "image_kind": "raw",
+      "channel_index": 1,
+      "bit_depth": 16,
+      "intensity_unit": "photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",
+      "source": "Sewon_GFAP_curve.lif::1-500"
+    },
+    {
+      "concentration": "1:1000",
+      "dilution_factor": 1000,
+      "series_name": "1-1000",
+      "image_kind": "raw",
+      "channel_index": 1,
+      "bit_depth": 16,
+      "intensity_unit": "photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",
+      "source": "Sewon_GFAP_curve.lif::1-1000"
+    },
+    {
+      "concentration": "1:2000",
+      "dilution_factor": 2000,
+      "series_name": "1-2000",
+      "image_kind": "raw",
+      "channel_index": 1,
+      "bit_depth": 16,
+      "intensity_unit": "photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",
+      "source": "Sewon_GFAP_curve.lif::1-2000"
+    }
+  ],
+  "excluded_series": [],
+  "warnings": [
+    "Configured deconvolved series not loaded and excluded from all intensity analyses: 1-250_Lng, 1-500_Lng, 1-1000_Lng, 1-2000_Lng",
+    "Raw stacks differ in number of z-slices: 1:250=21, 1:500=24, 1:1000=23, 1:2000=23",
+    "Raw stacks differ in z-step (um): 1:250=1.000715, 1:500=1.0007152173913043, 1:1000=1.0007149999999998, 1:2000=1.0007149999999998",
+    "1-250 [1:250] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.",
+    "1-500 [1:500] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.",
+    "1-1000 [1:1000] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.",
+    "1-2000 [1:2000] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.",
+    "Raw maxima are nearly identical across concentrations (1:250=1429, 1:500=1421, 1:1000=1419, 1:2000=1418) and far below the nominal ceiling (65535). Only a few voxels sit at each maximum, so there is no hard clipping; gradual (soft) compression of the brightest signal, e.g. photon-counting dead-time non-linearity, is NOT excluded by this check. saturation_fraction cannot detect either; compare the upper tails of the survival curves before comparing brightness."
+  ]
+}
