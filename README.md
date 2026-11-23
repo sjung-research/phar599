@@ -195,4 +195,6 @@ results/          outputs (git-ignored): inspect/, real/ (review/, run_*, prelim
 Calculation definitions: [`docs/methods.md`](docs/methods.md).
 Step-by-step Windows instructions: [`docs/RUNNING_ON_WINDOWS.md`](docs/RUNNING_ON_WINDOWS.md).
 What was done in the development session (including an authorship note): [`docs/SESSION_LOG.md`](docs/SESSION_LOG.md).
+Handoff for another AI assistant (self-contained): [`docs/AI_HANDOFF.md`](docs/AI_HANDOFF.md).
+First report to Rose: [`reports/GFAP_concentration_curve_report_2026-11-23.md`](reports/GFAP_concentration_curve_report_2026-11-23.md) (and `.docx`).
 Project background (verbatim copies of the briefing documents): [`docs/context/`](docs/context/).

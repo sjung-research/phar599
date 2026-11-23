@@ -46,7 +46,7 @@ in `docs/methods.md`, so they can be compared with hers point by point.
 | 11-22 | Second review: tissue mask `none`, z-range `full` confirmed by Sewon. | `e7ccd64` |
 | 11-22 | First confirmed run. Histogram bins too coarse and `LARGE_REGION` flag miscalibrated; both fixed. | `e5552bf` |
 | 11-22 | Re-run with fine bins revealed soft detector compression; recorded. | `811e1b7` |
-| 11-23 | English summary report for Rose (Claude Docs, with figures); this log. | this commit |
+| 11-23 | English summary report for Rose (Claude Docs, docx and md in `reports/`), this log, and `docs/AI_HANDOFF.md`. | latest commits |
 
 ## What was built
 
