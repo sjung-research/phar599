@@ -10,7 +10,7 @@ Across an 8-fold range of primary dilution (1:250 to 1:2000), none of the measur
 - **The 1:1000 difference is field content, not stain intensity.** Its intensity distribution has the same slope as the others, shifted up: more GFAP-occupied volume (4.4% vs 2.3-2.8% of voxels above threshold), not brighter structures.
 - **The middle of the stack is dimmer at every dilution, equally.** Mean signal near mid-depth is about 55-63% of the near-surface peak. 1:250, 1:500 and 1:2000 overlap almost exactly at mid-depth, so more primary did not improve penetration.
 - **Background is low and does not track dilution.** The background proxy is 21-28 counts, against a foreground median of about 540 counts.
-- **The detector saturates softly near 1,400 counts.** All four stacks share a pile-up at 1,300-1,340 counts and a cliff at about 1,420. Maxima and p99.8 measure that ceiling, not the stain, so only means, medians and the 100-1,200-count range are used for comparison.
+- **The detector saturates softly near 1,400 counts.** All four stacks share a pile-up at 1,300-1,340 counts and a cliff at about 1,420. Maxima and p99.8 measure that ceiling, not the stain, so only means, medians and the 100-1,200-count range are used for comparison. The same signature appears in Rose's first-staining data (Figure 8).
 
 ## Data and acquisition
 
@@ -123,6 +123,12 @@ Rose's thin-versus-thick-process hypothesis predicts a change in distribution sh
 
 *Figure 7. Survival curves (fraction of stack voxels at or above each intensity). 1:250, 1:500 and 1:2000 nearly coincide; 1:1000 is shifted up; all converge at the ceiling.*
 
+**Comparison with the first staining (Mouse, Rabbit and Chicken anti-GFAP, 63x).** Figure 8 shows the four dilutions in the layout of Rose's first-staining figure (GFAP_maxproj_all_magma). Her Mouse and Chicken histograms show the same feature as here: a small pile-up at about 1,000 counts and a cliff near 1,050, with p99.8 of 1,005-1,018 in all six images, sitting on that pile-up. Rabbit, the dimmest stain, has no pile-up and p99.8 of 857-964. The same shape at a different count level, with a different objective and acquisition settings, is consistent with a detector-response ceiling rather than a property of this antibody lot; a linearity test is still needed to confirm it. In both experiments, p99.8 therefore mostly reports the ceiling. Because the four p99.8 values here are nearly equal (1,352-1,364), per-image p99.8 display gives practically the same range for every image, so the dilutions looking alike is not a display-normalisation artefact.
+
+![Raw MIPs on per-image display ranges above their pixel-intensity histograms with the 99.8th percentile marked](figures/fig8_mip_histograms_rose_style.png)
+
+*Figure 8. Layout of Rose's first-staining figure: each raw MIP on its own display range (0-p99.8) above the histogram of its pixels (raw counts, log scale; shared 6-count bins and axes). Red line: that image's p99.8.*
+
 ## Interpretation and confidence
 
 The most likely reading is that this aliquot is already in excess at 1:2000 under this protocol: binding has plateaued, so diluting from 1:250 to 1:2000 changes neither per-structure brightness, penetration nor background. The one field that differs, 1:1000, differs in how much GFAP-positive tissue it contains, which points to section or region rather than concentration.
@@ -156,7 +162,7 @@ Questions:
 
 ## Provenance
 
-All numbers and figures come from the confirmed (reviewed) run run_20261122-160023 on the unmodified .lif, whose complete output is stored in the repository under reports/run_outputs/. An earlier confirmed run (run_20261122-153413) gave identical values; only its histogram binning and one QC flag threshold differed.
+All numbers and figures come from the confirmed (reviewed) run run_20261122-160023 on the unmodified .lif, whose complete output is stored in the repository under reports/run_outputs/. An earlier confirmed run (run_20261122-153413) gave identical values; only its histogram binning and one QC flag threshold differed. Figure 8 comes from run_20261126-235040, which reproduced every table of run_20261122-160023 byte-for-byte.
 
 | Item | Value |
 | --- | --- |
