@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최신 코드 받기 (git pull) 설명서</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root { --ink:#1f1f1e; --ink2:#5c5c58; --line:#d9d9d5; --accent:#0d366b; --soft:#eef3f9; --warn:#fff6e5; --warnline:#e0a43a; }
+  body { font-family: "WenQuanYi Zen Hei", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.6; background: #fff; }
+  h1 { font-size: 19pt; color: var(--accent); margin: 0 0 4pt; }
+  .sub { color: var(--ink2); margin: 0 0 14pt; font-size: 9.5pt; }
+  h2 { font-size: 13pt; color: var(--accent); margin: 20pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5px solid var(--line); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 14pt 0 4pt; break-after: avoid; }
+  p { margin: 4pt 0 6pt; }
+  code, pre { font-family: "DejaVu Sans Mono", "WenQuanYi Zen Hei Mono", monospace; }
+  code { background: #f1f1ee; padding: 0 3pt; border-radius: 3pt; font-size: 9.5pt; }
+  pre { background: #1f2430; color: #f4f4f2; padding: 7pt 10pt; border-radius: 5pt; font-size: 10pt; margin: 5pt 0 8pt; white-space: pre-wrap; word-break: break-all; break-inside: avoid; }
+  pre.out { background: #f4f4f1; color: var(--ink); border: 1px solid var(--line); font-size: 9pt; }
+  .step { border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 5pt; padding: 7pt 11pt 4pt; margin: 9pt 0; break-inside: avoid; }
+  .step .num { display: inline-block; background: var(--accent); color: #fff; border-radius: 10pt; padding: 0 8pt; font-size: 9pt; margin-right: 6pt; }
+  .step h3 { margin-top: 2pt; }
+  .tip { background: var(--soft); border-radius: 5pt; padding: 6pt 10pt; margin: 6pt 0; font-size: 9.8pt; break-inside: avoid; }
+  .warn { background: var(--warn); border-left: 4px solid var(--warnline); border-radius: 4pt; padding: 6pt 10pt; margin: 6pt 0; font-size: 9.8pt; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9.4pt; break-inside: auto; }
+  th, td { border: 1px solid var(--line); padding: 5pt 7pt; vertical-align: top; text-align: left; }
+  th { background: var(--soft); }
+  tr { break-inside: avoid; }
+  .cheat { border: 2px solid var(--accent); border-radius: 6pt; padding: 8pt 12pt; break-inside: avoid; }
+  .small { font-size: 9pt; color: var(--ink2); }
+  ol, ul { margin: 3pt 0 6pt 16pt; padding-left: 6pt; }
+  li { margin: 2pt 0; }
+</style>
+</head>
+<body>
+
+<h1>최신 코드 받기 (git pull) 설명서</h1>
+<p class="sub">GFAP 농도 곡선 분석 프로그램 (<code>gfap-conc</code>) · 노트북과 연구실 컴퓨터 공용 · 2026-11-27</p>
+
+<h2>1. 이 설명서로 하는 일</h2>
+<p>Claude가 코드를 고치면 GitHub 저장소(<code>sjung-research/phar599</code>)에 올라갑니다. <b>git pull</b>은 그 최신 코드를 내 컴퓨터의 프로젝트 폴더로 가져오는 명령입니다.</p>
+<ul>
+  <li><b>프로젝트 폴더 (두 컴퓨터 모두):</b> <code>C:\Users\sjung3\Documents\phar599</code></li>
+  <li><b>사용하는 창:</b> Windows PowerShell. <u>Anaconda Prompt는 쓰지 마세요.</u></li>
+  <li><b>원칙:</b> 명령은 <b>한 번에 한 줄씩</b> 붙여넣고 Enter를 누릅니다. 두 줄을 한꺼번에 붙여넣으면 오류가 납니다.</li>
+</ul>
+<div class="tip"><b>왜 폴더 이동(cd)이 먼저 필요한가요?</b><br>
+PowerShell을 새로 열면 항상 <code>C:\Users\sjung3</code>(홈 폴더)에서 시작합니다. <code>git</code>과 <code>uv</code> 명령은 <b>지금 있는 폴더</b>에 대해 동작하므로, 먼저 프로젝트 폴더로 들어가야 합니다. PowerShell을 껐다 켰다면 매번 2단계부터 다시 합니다.</div>
+
+<h2>2. 단계별 진행</h2>
+
+<div class="step">
+<h3><span class="num">1단계</span>PowerShell 열기</h3>
+<p>시작 메뉴를 열고 <b>PowerShell</b>을 입력한 뒤 <b>Windows PowerShell</b>을 클릭합니다. 창이 열리면 맨 아래 줄이 이렇게 보입니다.</p>
+<pre class="out">PS C:\Users\sjung3&gt;</pre>
+</div>
+
+<div class="step">
+<h3><span class="num">2단계</span>프로젝트 폴더로 이동 <span class="small">(PowerShell을 열 때마다 필수)</span></h3>
+<pre>cd $HOME\Documents\phar599</pre>
+<p>성공하면 줄 앞부분이 프로젝트 폴더로 바뀝니다.</p>
+<pre class="out">PS C:\Users\sjung3\Documents\phar599&gt;</pre>
+<p class="small"><code>$HOME</code>은 <code>C:\Users\sjung3</code>를 뜻합니다. 같은 명령이 노트북과 연구실 컴퓨터 모두에서 동작합니다.</p>
+</div>
+
+<div class="step">
+<h3><span class="num">3단계</span>(권장) 현재 상태 확인</h3>
+<pre>git status</pre>
+<p>정상이라면 다음과 비슷하게 나옵니다.</p>
+<pre class="out">On branch claude/blissful-cori-wjn019
+Your branch is up to date with 'origin/claude/blissful-cori-wjn019'.
+nothing to commit, working tree clean</pre>
+<p class="small"><code>results\</code> 폴더와 <code>config\analysis.yaml</code>은 git이 일부러 무시하므로 여기에 나오지 않는 것이 정상입니다. 분석 결과와 설정은 git pull로 지워지지 않습니다.</p>
+</div>
+
+<div class="step">
+<h3><span class="num">4단계</span>최신 코드 받기</h3>
+<pre>git pull</pre>
+<p>둘 중 하나가 나오면 정상입니다.</p>
+<pre class="out">Already up to date.</pre>
+<p class="small">→ 이미 최신 상태입니다. 바뀐 것이 없습니다.</p>
+<pre class="out">Updating b330699..e97bb25
+Fast-forward
+ src/gfap_conc/plots.py | 120 +++++++++
+ ...</pre>
+<p class="small">→ 새 코드를 받았습니다. 바뀐 파일 목록이 표시됩니다.</p>
+<p class="small">처음이거나 로그인이 만료되었으면 브라우저 창이 열리며 GitHub 로그인을 요청합니다. 비공개 저장소라서 정상입니다.</p>
+</div>
+
+<div class="step">
+<h3><span class="num">5단계</span>필요한 패키지 맞추기</h3>
+<pre>uv sync</pre>
+<p class="small">새 코드가 다른 패키지 버전을 필요로 할 수 있어서, git pull 뒤에는 항상 실행합니다. 바뀐 것이 없으면 금방 끝납니다.</p>
+</div>
+
+<div class="step">
+<h3><span class="num">6단계</span>(권장) 테스트로 확인</h3>
+<pre>uv run pytest</pre>
+<p>마지막 줄에 <b><code>92 passed</code></b>처럼 모두 통과(passed)가 나오면 준비가 끝났습니다. 테스트 수는 코드가 바뀌면 달라질 수 있습니다. <code>failed</code>가 있으면 그 출력을 Claude에게 그대로 보내세요.</p>
+</div>
+
+<h2>3. 그다음: 분석 다시 실행하기 (참고)</h2>
+<p>새 그림 기능을 받은 경우 분석을 다시 실행해야 결과 폴더에 새 그림이 생깁니다. 같은 PowerShell 창에서 이어서 입력합니다.</p>
+<pre>uv run gfap-conc run --config config\analysis.yaml</pre>
+<p>결과 폴더 열기:</p>
+<pre>explorer (Get-ChildItem results\real -Directory -Filter "run_*" | Sort-Object LastWriteTime | Select-Object -Last 1).FullName</pre>
+<div class="tip">이미 review를 확정했으므로 다시 review할 필요가 없습니다. 같은 <code>.lif</code> 파일과 같은 설정을 쓰는 한 확정은 유효합니다. 실행할 때마다 <code>results\real\run_날짜-시간</code> 폴더가 새로 생기고, 예전 결과는 지워지지 않습니다.</div>
+
+<h2>4. 문제가 생겼을 때</h2>
+<table>
+  <tr><th style="width:38%">화면에 나온 메시지</th><th>원인과 해결</th></tr>
+  <tr><td><code>fatal: not a git repository</code></td><td>프로젝트 폴더 밖에 있습니다. <b>2단계</b>(<code>cd $HOME\Documents\phar599</code>)를 먼저 하세요. 현재 위치는 <code>Get-Location</code>으로 확인할 수 있습니다.</td></tr>
+  <tr><td><code>Cannot find path ... phar599</code><br>(cd 할 때)</td><td>이 컴퓨터에 아직 프로젝트를 받지 않았습니다. 처음 한 번만 아래를 실행합니다.<br><code>cd $HOME\Documents</code><br><code>git clone -b claude/blissful-cori-wjn019 https://github.com/sjung-research/phar599.git</code></td></tr>
+  <tr><td><code>'git'</code> 또는 <code>'uv'</code> 용어가 ... 인식되지 않습니다</td><td>프로그램이 설치되지 않았거나, 설치 직후 창을 다시 열지 않았습니다. PowerShell을 닫았다 다시 열어 보고, 그래도 안 되면 <code>docs\RUNNING_ON_WINDOWS.md</code>의 설치 단계를 따르세요.</td></tr>
+  <tr><td><code>Your local changes to the following files would be overwritten by merge</code></td><td>추적되는 파일을 직접 수정한 적이 있어서 git이 덮어쓰기를 멈춘 것입니다. 지우지 말고 그 출력을 Claude에게 보내세요. 수정한 내용이 필요 없다면 <code>git stash</code> 후 다시 <code>git pull</code>을 하면 됩니다.</td></tr>
+  <tr><td>브라우저 로그인 창이 열림</td><td>정상입니다. GitHub 계정으로 로그인하면 git pull이 계속 진행됩니다.</td></tr>
+  <tr><td>명령이 이상하게 붙어서 실행됨<br>(예: <code>...yamlCopy-Item ...</code>)</td><td>두 명령을 한 번에 붙여넣었습니다. <b>한 줄씩</b> 다시 실행하세요.</td></tr>
+  <tr><td><code>uv run pytest</code>에서 <code>failed</code></td><td>출력 전체를 Claude에게 보내세요. 분석은 테스트가 모두 통과한 뒤에 실행하는 것이 안전합니다.</td></tr>
+</table>
+<div class="warn"><b>공용 컴퓨터에서:</b> 다른 사람도 같은 Windows 계정을 쓴다면 작업 후 GitHub 로그인을 지우세요. Windows <b>자격 증명 관리자 → Windows 자격 증명</b>에서 <code>git:https://github.com</code>을 제거하면 됩니다. 다음 git pull 때 다시 로그인을 묻습니다.</div>
+
+<h2>5. 한 장 요약</h2>
+<div class="cheat">
+<p><b>PowerShell을 새로 열 때마다, 아래 순서대로 한 줄씩:</b></p>
+<pre>cd $HOME\Documents\phar599</pre>
+<pre>git pull</pre>
+<pre>uv sync</pre>
+<pre>uv run pytest</pre>
+<p class="small">분석을 다시 돌릴 때만 이어서: <code>uv run gfap-conc run --config config\analysis.yaml</code></p>
+</div>
+
+</body>
+</html>
