@@ -69,6 +69,9 @@ project without the original chat. Read it fully before acting. Last updated 202
   - repo at `C:\Users\sjung3\Documents\phar599`;
   - data at `E:\2026NovemberGFAPlif\`;
   - Korean locale (cp949).
+- **A second Windows computer (the lab desktop) also works.** There the data are at
+  `C:\Users\sjung3\Desktop\OneDrive_1_11-23-2026\` (same SHA-256). A run there on
+  2026-11-23 reproduced all nine CSV tables byte-for-byte, as checked by the student.
 - **The data never leave the laptop.** A cloud AI only sees what the user pastes: console
   output, CSV excerpts, `summary.md`, PNG figures.
 - **Workflow:** the AI edits code → pushes → the user runs `git pull`, then

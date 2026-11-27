@@ -99,9 +99,9 @@
    were fixed: histogram bins were too coarse, and one QC flag was miscalibrated. Re-run.
 7. **Reproducibility (Nov 23).**
    - The same analysis ran on a second computer (the lab desktop) with a checksum-verified
-     copy of the data, giving the same outputs and warnings.
-   - A byte-level comparison of the output tables between the two computers was suggested
-     but not yet reported.
+     copy of the data.
+   - **All nine output tables were byte-identical** to the laptop run (SHA-256 comparison,
+     checked by the student).
 8. **Documentation (Nov 23).**
    - An English results report (with 7 figures, also as .docx) for Rose;
    - methods and validation documents;
