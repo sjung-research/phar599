@@ -230,8 +230,11 @@ There is also an online copy (Claude Docs): <https://claude.ai/artifact/EMni7yBi
    per-field results, then a summary across fields.
 5. **Done 2026-11-27:** figures in the layout of Rose's first-staining PDFs
    (`mip_with_histograms_rose_style.png`, `depth_slice_gallery_{per_image,shared}.png`;
-   `plots.py`, `depth.gallery_slice_indices`). They are not in the committed run snapshot
-   until the analysis is re-run. **Finding from comparing with Rose's PDFs:** her Mouse and
+   `plots.py`, `depth.gallery_slice_indices`). They are in the committed snapshot
+   `reports/run_outputs/run_20261126-235040/` (tables identical to `run_20261122-160023`).
+   On the real data, all four MIP histograms show the ceiling pile-up, and the per-image
+   p99.8 values are nearly equal, so per-image display is not what made the images look
+   alike. **Finding from comparing with Rose's PDFs:** her Mouse and
    Chicken MIP histograms show the same pile-up and cliff (about 1,000 and 1,050 counts, at
    63x), with p99.8 1005–1018 for all six images. This independently supports the
    detector-ceiling interpretation. Rabbit, which is dimmer, shows no pile-up.

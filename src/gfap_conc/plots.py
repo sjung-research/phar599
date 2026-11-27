@@ -17,6 +17,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402,F401
 import numpy as np  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 
@@ -448,6 +449,8 @@ def depth_slice_gallery(result: AnalysisResult, path: Path, scale: str, display_
                           top=1 - 0.9 / fig.get_figheight(), bottom=0.5 / fig.get_figheight())
     ymax = 1.05 * float(prof["p99_8"].max())
     use_um = prof["z_um"].notna().all()
+    xmax = float((prof["z_um"] if use_um else prof["z_index"]).max())
+    paxes = []
     for i, s in enumerate(stacks):
         vmax = shared if scale == "shared" else vmaxes[s.series_name]
         idx = gallery_slice_indices(s.n_z)
@@ -475,10 +478,14 @@ def depth_slice_gallery(result: AnalysisResult, path: Path, scale: str, display_
         sel = d[d["z_index"].isin(idx)]
         pax.plot(sel["z_um"] if use_um else sel["z_index"], sel["p99_8"], "o", color=INK, markersize=5)
         pax.set_ylim(0, ymax)
+        paxes.append(pax)
         pax.set_ylabel("Slice p99.8 (counts)", fontsize=7.5)
         pax.tick_params(labelsize=7)
         if i == n - 1:
             pax.set_xlabel("Depth (µm, nominal)" if use_um else "z index", fontsize=8)
+    for pax in paxes:  # same depth axis on every row, so stacks of different depth line up
+        pax.set_xlim(-0.03 * xmax, xmax * 1.03)
+        pax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(5 if xmax > 10 else 2))
     mode = ("PER-IMAGE display (each row 0–p{p:g} of its own voxels; rows not comparable)" if scale != "shared"
             else "SHARED display 0–{v:.0f} for every row (largest per-stack p{p:g}; rows comparable)")
     fig.suptitle("Raw GFAP depth gallery (layout of Rose's first-staining figure): slices at 0/25/50/75/90% depth, "

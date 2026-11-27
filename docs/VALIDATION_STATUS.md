@@ -119,6 +119,21 @@ _Last updated: 2026-11-20. No real microscopy data has been analysed yet._
   - Confirmation requires a linearity test: the same field at two excitation powers or
     accumulation settings.
 
+### Rose-layout figures on the real data (2026-11-27, run `run_20261126-235040`)
+
+- All four MIP histograms show the same pile-up at about 1,300–1,350 counts and a cliff
+  near 1,420. Rose's Mouse and Chicken first-staining histograms show the same shape at
+  about 1,000 / 1,050 counts (63x, different settings). Each image's p99.8 sits on that
+  pile-up, in both datasets.
+- Because the four p99.8 values are nearly equal (1352–1364), per-image p99.8 display is
+  effectively one shared range here. The four images "looking the same" is therefore **not**
+  a display-normalisation artefact.
+- The depth gallery's per-image ranges (stack-voxel p99.8: 1146 / 1082 / 1243 / 1113) are
+  below the MIP p99.8, the same relation as Rose's Ms_2 (920 vs 1005). This supports, but
+  does not confirm, the assumption that her per-image range is the stack-voxel p99.8.
+- All nine tables of this run are byte-identical to `run_20261122-160023`; only figures
+  were added.
+
 ## Requires the real `.lif` before results can be trusted
 
 Ordered roughly by when they will come up.
