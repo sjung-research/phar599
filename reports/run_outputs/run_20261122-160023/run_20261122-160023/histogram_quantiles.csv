@@ -1,9 +1,0 @@
-data_origin,concentration,dilution_factor,series_name,image_kind,channel_index,bit_depth,intensity_unit,source,n_pixels,q0.5,q0.9,q0.99,q0.998
-lif,1:250,250,1-250,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",mip_all_pixels,3300000,110,584,1278,1357
-lif,1:250,250,1-250,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",stack_all_voxels,69300000,27,126,662,1146
-lif,1:500,500,1-500,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",mip_all_pixels,3300000,100,543,1252,1352
-lif,1:500,500,1-500,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",stack_all_voxels,79200000,22,106,590,1082
-lif,1:1000,1000,1-1000,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",mip_all_pixels,3300000,157,785,1327,1364
-lif,1:1000,1000,1-1000,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",stack_all_voxels,75900000,33,173,849,1243
-lif,1:2000,2000,1-2000,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",mip_all_pixels,3300000,98,521,1254,1354
-lif,1:2000,2000,1-2000,raw,1,16,"photon counts (HyD S PhotonCounting; line acc. 4, frame avg. 2)",stack_all_voxels,75900000,23,112,609,1113

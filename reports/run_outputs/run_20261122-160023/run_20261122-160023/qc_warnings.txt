@@ -1,8 +1,0 @@
-Configured deconvolved series not loaded and excluded from all intensity analyses: 1-250_Lng, 1-500_Lng, 1-1000_Lng, 1-2000_Lng
-Raw stacks differ in number of z-slices: 1:250=21, 1:500=24, 1:1000=23, 1:2000=23
-Raw stacks differ in z-step (um): 1:250=1.000715, 1:500=1.0007152173913043, 1:1000=1.0007149999999998, 1:2000=1.0007149999999998
-1-250 [1:250] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.
-1-500 [1:500] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.
-1-1000 [1:1000] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.
-1-2000 [1:2000] background proxy RIGHT_TAIL: proxy intensities have a long upper tail, as expected if faint GFAP processes are included. Do not read this background value as autofluorescence.
-Raw maxima are nearly identical across concentrations (1:250=1429, 1:500=1421, 1:1000=1419, 1:2000=1418) and far below the nominal ceiling (65535). Only a few voxels sit at each maximum, so there is no hard clipping; gradual (soft) compression of the brightest signal, e.g. photon-counting dead-time non-linearity, is NOT excluded by this check. saturation_fraction cannot detect either; compare the upper tails of the survival curves before comparing brightness.
