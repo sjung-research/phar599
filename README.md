@@ -11,15 +11,15 @@ morphological detail. The pipeline implements Rose's four requested analyses on 
 
 | # | Analysis | Main outputs |
 |---|---|---|
-| 1 | Max-intensity projection: raw mean ("average bit value") + 99.8th-percentile display reference | `max_projection_summary.csv`, `figures/raw_mip_grid_*.png` |
-| 2 | Intensity through the z-stack ("how much darker is the middle?") | `depth_profile.csv`, `middle_vs_outer_summary.csv`, `figures/depth_profile_*.png` |
+| 1 | Max-intensity projection: raw mean ("average bit value") + 99.8th-percentile display reference | `max_projection_summary.csv`, `figures/raw_mip_grid_*.png`, `figures/mip_with_histograms_rose_style.png` |
+| 2 | Intensity through the z-stack ("how much darker is the middle?") | `depth_profile.csv`, `middle_vs_outer_summary.csv`, `figures/depth_profile_*.png`, `figures/depth_slice_gallery_*.png` |
 | 3 | Background fluorescence (explicitly labelled **proxy** unless controls/ROIs exist), with QC flags and a threshold-sensitivity diagnostic | `background_summary.csv`, `threshold_sensitivity.csv`, `figures/background_*.png`, `figures/threshold_sensitivity.png` |
 | 4 | Pixel-intensity histograms with identical integer-aligned bins | `intensity_histogram.csv`, `intensity_survival.csv`, `histogram_quantiles.csv`, `figures/histograms_*`, `figures/survival_*` |
 
 `_lng` (deconvolved, full-16-bit-normalised) series are **excluded from every intensity
 table** by a code-level guard; they are reserved for morphology QA (not yet implemented).
 
-> **Status:** core pipeline, review gate and 90 synthetic/unit tests are in place.
+> **Status:** core pipeline, review gate and 92 synthetic/unit tests are in place.
 > **No real microscopy data has been analysed yet.** See [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md)
 > for exactly what still needs validation on the actual `.lif`.
 

@@ -13,7 +13,7 @@ project without the original chat. Read it fully before acting. Last updated 202
   and asked for four analyses: (1) average bit value of max projections, with a 99.8th-
   percentile "normalization max"; (2) intensity change through the stack; (3) background
   fluorescence; (4) intensity histograms.
-- **Status.** A Python pipeline (`gfap-conc`) is built, tested (90 tests) and has been run on
+- **Status.** A Python pipeline (`gfap-conc`) is built, tested (92 tests) and has been run on
   the real file. A first report exists. **Result:** no concentration dependence in any
   measure. There is also soft detector saturation near 1,400 photon counts.
 - **Next step.** Waiting for Rose's feedback. Likely next work: background-subtracted
@@ -228,11 +228,18 @@ There is also an online copy (Claude Docs): <https://claude.ai/artifact/EMni7yBi
 4. **Several fields per concentration** (ipsi/contra, replicates). The pipeline currently
    refuses duplicate concentrations on purpose. It needs an explicit aggregation design:
    per-field results, then a summary across fields.
-5. **`_Lng` morphology QA:** paired raw vs `_Lng` crops, each on its own display range. The
+5. **Done 2026-11-27:** figures in the layout of Rose's first-staining PDFs
+   (`mip_with_histograms_rose_style.png`, `depth_slice_gallery_{per_image,shared}.png`;
+   `plots.py`, `depth.gallery_slice_indices`). They are not in the committed run snapshot
+   until the analysis is re-run. **Finding from comparing with Rose's PDFs:** her Mouse and
+   Chicken MIP histograms show the same pile-up and cliff (about 1,000 and 1,050 counts, at
+   63x), with p99.8 1005–1018 for all six images. This independently supports the
+   detector-ceiling interpretation. Rabbit, which is dimmer, shows no pile-up.
+6. **`_Lng` morphology QA:** paired raw vs `_Lng` crops, each on its own display range. The
    config already has `pair_of`.
-6. **Inspect the `.lifext` separately**
+7. **Inspect the `.lifext` separately**
    (`uv run gfap-conc inspect "E:\...\Sewon_GFAP_curve.lifext"`) to know what it holds.
-7. **Later, out of scope now:** napari annotation of Rose's ~50 earlier astrocyte images, and
+8. **Later, out of scope now:** napari annotation of Rose's ~50 earlier astrocyte images, and
    segmentation.
 
 ## 10. Pitfalls already met (do not repeat)

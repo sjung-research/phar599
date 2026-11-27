@@ -184,6 +184,27 @@ from the channel's `Resolution` metadata.
 - Rose's thin-vs-thick-process hypothesis is a morphological interpretation. Histogram
   shape alone cannot establish process thickness.
 
+## Figures in the layout of Rose's first-staining analysis
+
+These two figures reproduce the layout of `GFAP_maxproj_all_magma.pdf` and
+`GFAP_depth_slices_magma.pdf` so the two analyses can be compared side by side. They add no
+new statistics.
+
+- **`mip_with_histograms_rose_style.png`:** each MIP on its own display range 0–p99.8, above
+  the histogram of that MIP's pixels. The histogram shows raw pixel counts on a log y-axis,
+  from `intensity_histogram.csv`, source `mip_all_pixels`. A red line marks that image's
+  p99.8, with its value. Unlike Rose's figure, all histograms share bins, x-range and
+  y-range.
+- **`depth_slice_gallery_per_image.png` / `_shared.png`:** XY slices at 0/25/50/75/90% depth.
+  The slice index is `round(f × (n_z − 1))` (numpy round-half-to-even); this reproduces the
+  z indices printed in Rose's figure (e.g. 0, 10, 20, 31, 37 for 42 slices). At right is the
+  per-slice p99.8 profile, with dots at the shown slices.
+  - `per_image` (Rose's choice): each row shares one display range, 0–p99.8 of all voxels
+    of that stack. This is assumed to match Rose's per-image range but is not confirmed.
+  - `shared`: one range for all rows, so rows are comparable.
+  - The p99.8 profile inherits the detector-ceiling caveat; the mean profile is in
+    `depth_profile_raw_mean.png`.
+
 ## Statistical stance
 
 There is one field per concentration and no biological replicates. Results are descriptive.

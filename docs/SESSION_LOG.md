@@ -46,6 +46,7 @@ in `docs/methods.md`, so they can be compared with hers point by point.
 | 11-22 | Second review: tissue mask `none`, z-range `full` confirmed by Sewon. | `e7ccd64` |
 | 11-22 | First confirmed run. Histogram bins too coarse and `LARGE_REGION` flag miscalibrated; both fixed. | `e5552bf` |
 | 11-22 | Re-run with fine bins revealed soft detector compression; recorded. | `811e1b7` |
+| 11-27 | Compared outputs with Rose's first-staining PDFs (and a ChatGPT review of them). Added figures in Rose's layout: MIP with its pixel histogram and p99.8 line; depth slice gallery at 0/25/50/75/90% using her slice rule. | `b491535` |
 | 11-23 | English summary report for Rose (Claude Docs, docx and md in `reports/`), this log, and `docs/AI_HANDOFF.md`. | latest commits |
 
 ## What was built
