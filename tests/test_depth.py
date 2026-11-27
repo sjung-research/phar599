@@ -81,3 +81,15 @@ def test_detect_signal_z_extent_keeps_internal_dip_with_background_floor():
     assert detect_signal_z_extent(v[2:11], 0.2, floor=20) == (0, 8)  # nothing to trim
     # the old rule (min floor, half level) cut the real stacks in the middle
     assert detect_signal_z_extent(v[2:11], 0.5)[1] < 8
+
+
+def test_gallery_slice_indices_reproduce_rose_first_staining_figure():
+    from gfap_conc.depth import gallery_slice_indices
+
+    # z indices printed in GFAP_depth_slices_magma.pdf (Mouse Ms_2, Rabbit Rb_2, Chicken Ck_1)
+    assert gallery_slice_indices(42) == [0, 10, 20, 31, 37]
+    assert gallery_slice_indices(51) == [0, 12, 25, 38, 45]
+    assert gallery_slice_indices(48) == [0, 12, 24, 35, 42]
+    assert gallery_slice_indices(1) == [0, 0, 0, 0, 0]
+    with pytest.raises(ValueError):
+        gallery_slice_indices(0)

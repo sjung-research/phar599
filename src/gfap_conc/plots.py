@@ -358,6 +358,137 @@ def survival(result: AnalysisResult, path: Path, source: str, watermark: str | N
     return _finish(fig, path, watermark)
 
 
+# ---------------------------------------------------------------- Rose-style figures
+def _short_unit(unit: str) -> str:
+    return "Photon counts" if "photon" in unit.lower() else "Raw counts"
+
+
+def mip_with_histograms(result: AnalysisResult, path: Path, display_percentile: float,
+                        watermark: str | None) -> Path | None:
+    """Rose's first-staining layout: each MIP (per-image display 0..p99.8) above the histogram
+    of that MIP's pixels (raw pixel counts, log y) with the p99.8 marked in red.
+
+    Unlike Rose's figure, all histograms share bins, x-range and y-range, so columns are
+    directly comparable. Bin counts come from intensity_histogram.csv (source mip_all_pixels).
+    """
+    _style()
+    hist = result.tables["intensity_histogram"]
+    hist = hist[hist["source"] == "mip_all_pixels"]
+    mp = result.tables["max_projection_summary"]
+    mp = mp[(mp["projection"] == "mip_full_stack") & (mp["region"] == "all_pixels")].set_index("series_name")
+    stacks = [s for s in result.raw_stacks if s.series_name in set(hist["series_name"])]
+    if not stacks:
+        return None
+    n = len(stacks)
+    fig = plt.figure(figsize=(3.7 * n, 5.9))
+    gs = fig.add_gridspec(2, n, height_ratios=[1.55, 1], hspace=0.42, wspace=0.28, top=0.86, bottom=0.08)
+    hax0 = None
+    for j, s in enumerate(stacks):
+        mip = result.images[s.series_name]["mip"]
+        vmax = float(mp.loc[s.series_name, "display_vmax_within_image"])
+        ax = fig.add_subplot(gs[0, j])
+        im = ax.imshow(mip, cmap="magma", vmin=0, vmax=vmax, interpolation="nearest")
+        ax.set_xticks([]), ax.set_yticks([]), ax.grid(False)
+        ax.set_title(f"{s.concentration}  ({s.series_name})\ndisplay 0–{vmax:.0f} counts, "
+                     f"{display_percentile:g}th pct", fontsize=8.5)
+        _scalebar(ax, s.pixel_size_um[1] if s.pixel_size_um else None, mip.shape)
+        cb = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.05, pad=0.03, aspect=30)
+        cb.set_label(_short_unit(s.intensity_unit), fontsize=7.5)
+        cb.ax.tick_params(labelsize=7)
+
+        hax = fig.add_subplot(gs[1, j], sharex=hax0, sharey=hax0)
+        hax0 = hax0 or hax
+        d = hist[hist["series_name"] == s.series_name]
+        d = d[d["count"] > 0]
+        hax.bar(d["bin_left"], d["count"], width=d["bin_right_exclusive"] - d["bin_left"], align="edge",
+                color="#555553", linewidth=0)
+        hax.set_yscale("log")
+        hax.axvline(vmax, color=FLAG_INK, lw=1.2)
+        x_hi = result.params["histogram_max_value"] + result.params["histogram_bin_width"]
+        right = vmax < 0.4 * x_hi  # near the left edge: put the label right of the line
+        hax.annotate(f"{display_percentile:g}th = {vmax:.0f}", xy=(vmax, 0.97), xycoords=hax.get_xaxis_transform(),
+                     xytext=(4 if right else -4, 0), textcoords="offset points", ha="left" if right else "right",
+                     va="top", color=FLAG_INK, fontsize=8)
+        hax.set_xlabel(f"Max-projection pixel intensity ({_short_unit(s.intensity_unit).lower()})", fontsize=8)
+        if j == 0:
+            hax.set_ylabel("Pixels (log)")
+        hax.grid(False)
+    hax0.set_xlim(0, result.params["histogram_max_value"] + result.params["histogram_bin_width"])
+    w = result.params["histogram_bin_width"]
+    fig.suptitle("Raw GFAP max projections with their pixel-intensity histograms (layout of Rose's first-staining "
+                 f"figure)\nTop: PER-IMAGE display 0–p{display_percentile:g} (brightness not comparable). Bottom: "
+                 f"MIP pixel counts, shared {w}-count bins and axes; red line = that image's p{display_percentile:g}",
+                 fontsize=9.5)
+    return _finish(fig, path, watermark)
+
+
+def depth_slice_gallery(result: AnalysisResult, path: Path, scale: str, display_percentile: float,
+                        watermark: str | None) -> Path | None:
+    """Rose's depth layout: one row per stack, XY slices at 0/25/50/75/90% depth and the
+    per-slice p99.8 profile with the shown slices marked.
+
+    ``scale="per_image"`` (Rose): all slices of a row share that stack's own display range,
+    0..p99.8 of all its voxels. ``scale="shared"``: one range for every row (the largest of
+    those), so rows are comparable.
+    """
+    from .depth import GALLERY_FRACTIONS, gallery_slice_indices
+
+    _style()
+    stacks = result.raw_stacks
+    prof = result.tables["depth_profile"]
+    if not stacks or "p99_8" not in prof:
+        return None
+    vmaxes = {s.series_name: float(np.percentile(s.data, display_percentile)) for s in stacks}
+    shared = max(vmaxes.values())
+    n, k = len(stacks), len(GALLERY_FRACTIONS)
+    s0 = stacks[0]
+    aspect = s0.data.shape[1] / s0.data.shape[2]
+    fig = plt.figure(figsize=(2.3 * k + 4.6, 0.25 + n * (2.3 * aspect + 0.75)))
+    gs = fig.add_gridspec(n, k + 3, width_ratios=[1] * k + [0.06, 0.42, 1.7], wspace=0.08, hspace=0.45,
+                          top=1 - 0.9 / fig.get_figheight(), bottom=0.5 / fig.get_figheight())
+    ymax = 1.05 * float(prof["p99_8"].max())
+    use_um = prof["z_um"].notna().all()
+    for i, s in enumerate(stacks):
+        vmax = shared if scale == "shared" else vmaxes[s.series_name]
+        idx = gallery_slice_indices(s.n_z)
+        zum = s.z_um()
+        im = None
+        for j, (f, z) in enumerate(zip(GALLERY_FRACTIONS, idx, strict=True)):
+            ax = fig.add_subplot(gs[i, j])
+            im = ax.imshow(s.data[z], cmap="magma", vmin=0, vmax=vmax, interpolation="nearest")
+            ax.set_xticks([]), ax.set_yticks([]), ax.grid(False)
+            depth = f", {zum[z]:.0f} µm" if use_um else ""
+            ax.set_title(f"{f:.0%}  (z={z}{depth})", fontsize=7.5)
+            _scalebar(ax, s.pixel_size_um[1] if s.pixel_size_um else None, s.data.shape[1:])
+            if j == 0:
+                ax.set_ylabel(f"{s.concentration}\n{s.series_name}\n0–{vmax:.0f}\n{_short_unit(s.intensity_unit).lower()}",
+                              rotation=0,
+                              ha="right", va="center", fontsize=8.5, labelpad=8)
+        cax = fig.add_subplot(gs[i, k])
+        cb = fig.colorbar(im, cax=cax)  # unit and range are in the row label
+        cb.ax.tick_params(labelsize=6.5)
+
+        pax = fig.add_subplot(gs[i, k + 2])
+        d = prof[prof["series_name"] == s.series_name].sort_values("z_index")
+        x = d["z_um"] if use_um else d["z_index"]
+        pax.plot(x, d["p99_8"], color=_color(s.concentration), lw=1.8)
+        sel = d[d["z_index"].isin(idx)]
+        pax.plot(sel["z_um"] if use_um else sel["z_index"], sel["p99_8"], "o", color=INK, markersize=5)
+        pax.set_ylim(0, ymax)
+        pax.set_ylabel("Slice p99.8 (counts)", fontsize=7.5)
+        pax.tick_params(labelsize=7)
+        if i == n - 1:
+            pax.set_xlabel("Depth (µm, nominal)" if use_um else "z index", fontsize=8)
+    mode = ("PER-IMAGE display (each row 0–p{p:g} of its own voxels; rows not comparable)" if scale != "shared"
+            else "SHARED display 0–{v:.0f} for every row (largest per-stack p{p:g}; rows comparable)")
+    fig.suptitle("Raw GFAP depth gallery (layout of Rose's first-staining figure): slices at 0/25/50/75/90% depth, "
+                 "per-slice p99.8 at right (dots = shown slices)\n"
+                 + mode.format(p=display_percentile, v=shared)
+                 + ". Note: p99.8 near the detector ceiling flattens the surface peaks; see depth_profile_raw_mean.png",
+                 fontsize=9.5)
+    return _finish(fig, path, watermark)
+
+
 def make_all(result: AnalysisResult, fig_dir: Path, display_percentile: float, zoom_max: float | None,
              watermark: str | None = None) -> list[Path]:
     out = [
@@ -373,6 +504,11 @@ def make_all(result: AnalysisResult, fig_dir: Path, display_percentile: float, z
         background_comparison(result, fig_dir / "background_comparison.png", watermark),
         background_overlays(result, fig_dir / "background_ROI_overlays.png", display_percentile, watermark),
         threshold_sensitivity(result, fig_dir / "threshold_sensitivity.png", watermark),
+        mip_with_histograms(result, fig_dir / "mip_with_histograms_rose_style.png", display_percentile, watermark),
+        depth_slice_gallery(result, fig_dir / "depth_slice_gallery_per_image.png", "per_image", display_percentile,
+                            watermark),
+        depth_slice_gallery(result, fig_dir / "depth_slice_gallery_shared.png", "shared", display_percentile,
+                            watermark),
     ]
     for src in ("mip_all_pixels", "stack_all_voxels", "mip_tissue", "stack_tissue"):
         out.append(histograms(result, fig_dir / f"histograms_{src}_shared_bins.png", src, zoom_max, watermark))

@@ -148,3 +148,18 @@ def middle_vs_outer(
         "z_index_of_min": int(zs[int(np.argmin(vals))]),
         "z_index_of_max": int(zs[int(np.argmax(vals))]),
     }
+
+
+GALLERY_FRACTIONS = (0.0, 0.25, 0.5, 0.75, 0.9)
+
+
+def gallery_slice_indices(n_z: int, fractions: tuple[float, ...] = GALLERY_FRACTIONS) -> list[int]:
+    """Slice indices shown in a depth gallery: ``round(f * (n_z - 1))`` for each fraction.
+
+    numpy's round-half-to-even is used deliberately: this reproduces the z indices in
+    Rose's first-staining figure (GFAP_depth_slices_magma.pdf), e.g. 0, 10, 20, 31, 37 for
+    42 slices and 0, 12, 25, 38, 45 for 51 slices.
+    """
+    if n_z < 1:
+        raise ValueError("n_z must be >= 1")
+    return [int(np.round(f * (n_z - 1))) for f in fractions]

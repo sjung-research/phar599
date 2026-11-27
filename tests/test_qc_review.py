@@ -167,3 +167,13 @@ def test_spread_positions_separates_and_keeps_order(fracs):
     sp = np.sort(pos)
     assert np.all(np.diff(sp) >= 0.07 - 1e-9)
     assert sp[-1] <= 1.0 + 1e-9
+
+
+def test_rose_style_figures_are_written(tmp_path, synthetic_result):
+    from gfap_conc.plots import depth_slice_gallery, mip_with_histograms
+
+    p1 = mip_with_histograms(synthetic_result, tmp_path / "mip_hist.png", 99.8, None)
+    p2 = depth_slice_gallery(synthetic_result, tmp_path / "gallery.png", "per_image", 99.8, None)
+    p3 = depth_slice_gallery(synthetic_result, tmp_path / "gallery_shared.png", "shared", 99.8, None)
+    for p in (p1, p2, p3):
+        assert p is not None and p.exists() and p.stat().st_size > 10_000
